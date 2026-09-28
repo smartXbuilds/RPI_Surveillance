@@ -350,5 +350,9 @@ namespace RpiCam.Resources
         public static string LiveError => ResourceManager.GetString("LiveError", resourceCulture)!;
 
         public static string LiveBusy => ResourceManager.GetString("LiveBusy", resourceCulture)!;
+
+        public static string SettingsResolution => ResourceManager.GetString("SettingsResolution", resourceCulture)!;
+
+        public static string SettingsResolutionCustom => ResourceManager.GetString("SettingsResolutionCustom", resourceCulture)!;
     }
 }

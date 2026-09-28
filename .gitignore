@@ -39,3 +39,4 @@ Thumbs.db
 ## RpiCam
 /data/
 /publish/
+.playwright-mcp/

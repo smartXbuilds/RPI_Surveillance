@@ -18,6 +18,14 @@
     <MudStack Spacing="3">
         <MudNumericField T="int" @bind-Value="_interval" Label="@Locals.SettingsInterval"
                          HelperText="@Locals.SettingsIntervalHelp" Min="0" Variant="Variant.Outlined" />
+        <MudSelect T="string" Value="ResolutionPreset" ValueChanged="SetResolutionPreset"
+                   Label="@Locals.SettingsResolution" Variant="Variant.Outlined">
+            @foreach (var preset in ResolutionPresets)
+            {
+                <MudSelectItem T="string" Value="@preset.Key">@preset.Label</MudSelectItem>
+            }
+            <MudSelectItem T="string" Value="@CustomResolutionKey">@Locals.SettingsResolutionCustom</MudSelectItem>
+        </MudSelect>
         <MudStack Row="true" Spacing="2">
             <MudNumericField T="int" @bind-Value="_width" Label="@Locals.SettingsWidth"
                              Min="CameraSettings.MinSide" Max="CameraSettings.MaxSide" Variant="Variant.Outlined" />
@@ -130,6 +138,18 @@
 </MudPaper>
 
 @code {
+    private const string CustomResolutionKey = "custom";
+
+    // The OV5647's native sensor modes (confirmed via rpicam-hello --list-cameras on the device):
+    // picking one of these avoids the camera cropping/scaling to an odd in-between resolution.
+    private static readonly (string Key, int Width, int Height, string Label)[] ResolutionPresets =
+    [
+        ("640x480", 640, 480, "640 × 480"),
+        ("1296x972", 1296, 972, "1296 × 972"),
+        ("1920x1080", 1920, 1080, "1920 × 1080 (Full HD)"),
+        ("2592x1944", 2592, 1944, "2592 × 1944 (max.)"),
+    ];
+
     private int _interval;
     private int _width;
     private int _height;
@@ -154,6 +174,18 @@
 
         Network.Changed += OnNetworkChanged;
         await LoadSavedAsync();
+    }
+
+    private string ResolutionPreset =>
+        ResolutionPresets.FirstOrDefault(p => p.Width == _width && p.Height == _height).Key ?? CustomResolutionKey;
+
+    private void SetResolutionPreset(string key)
+    {
+        var preset = ResolutionPresets.FirstOrDefault(p => p.Key == key);
+        if (preset.Key is not null)
+        {
+            (_width, _height) = (preset.Width, preset.Height);
+        }
     }
 
     private static string AwbLabel(AwbMode mode) => mode switch

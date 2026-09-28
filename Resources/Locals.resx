@@ -295,6 +295,12 @@
   <data name="SettingsIntervalHelp" xml:space="preserve">
     <value>At least 5 seconds, or 0 for manual captures only.</value>
   </data>
+  <data name="SettingsResolution" xml:space="preserve">
+    <value>Resolution</value>
+  </data>
+  <data name="SettingsResolutionCustom" xml:space="preserve">
+    <value>Custom</value>
+  </data>
   <data name="SettingsWidth" xml:space="preserve">
     <value>Width (px)</value>
   </data>
