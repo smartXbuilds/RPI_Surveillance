@@ -9,7 +9,9 @@
 #   - a Wi-Fi hotspot that is the default network; the app can switch to a normal Wi-Fi and back
 #
 # Inputs, on the FAT partition (mounted at /boot/firmware):
-#   rpicam.env    HOTSPOT_SSID, HOTSPOT_PSK, APP_ADMIN_USER, APP_ADMIN_PASSWORD
+#   rpicam.env    HOTSPOT_SSID, HOTSPOT_PSK, APP_ADMIN_USER, APP_ADMIN_PASSWORD,
+#                 CAMERA_OVERLAY (optional, default ov5647 - the AZ-Delivery V1.3 camera this
+#                 project targets; set to imx708/imx219/imx477/... for a different sensor)
 #   rpicam-app/   publish output of the RpiCam project (framework-dependent, linux-arm64)
 #
 # Safe to run again by hand after a failure:  bash /boot/Automation_Custom_Script.sh
@@ -54,6 +56,8 @@ HOTSPOT_SSID=$(env_get HOTSPOT_SSID)
 HOTSPOT_PSK=$(env_get HOTSPOT_PSK)
 APP_ADMIN_USER=$(env_get APP_ADMIN_USER)
 APP_ADMIN_PASSWORD=$(env_get APP_ADMIN_PASSWORD)
+CAMERA_OVERLAY=$(env_get CAMERA_OVERLAY)
+CAMERA_OVERLAY=${CAMERA_OVERLAY:-ov5647}
 
 # systemd's EnvironmentFile would mangle quotes and backslashes.
 plain() { [[ -n $1 && $1 != *["'\"\\"]* ]]; }
@@ -61,9 +65,10 @@ plain "$HOTSPOT_SSID" || fail "HOTSPOT_SSID fehlt oder enthaelt Anfuehrungszeich
 plain "$HOTSPOT_PSK" || fail "HOTSPOT_PSK fehlt oder enthaelt Anfuehrungszeichen/Backslash"
 plain "$APP_ADMIN_USER" || fail "APP_ADMIN_USER fehlt oder enthaelt Anfuehrungszeichen/Backslash"
 plain "$APP_ADMIN_PASSWORD" || fail "APP_ADMIN_PASSWORD fehlt oder enthaelt Anfuehrungszeichen/Backslash"
+plain "$CAMERA_OVERLAY" || fail "CAMERA_OVERLAY enthaelt Anfuehrungszeichen/Backslash"
 ((${#HOTSPOT_PSK} >= 8 && ${#HOTSPOT_PSK} <= 63)) || fail "HOTSPOT_PSK muss 8 bis 63 Zeichen lang sein"
 ((${#HOTSPOT_SSID} <= 32)) || fail "HOTSPOT_SSID darf hoechstens 32 Zeichen lang sein"
-echo "Hotspot-SSID: $HOTSPOT_SSID, App-Benutzer: $APP_ADMIN_USER"
+echo "Hotspot-SSID: $HOTSPOT_SSID, App-Benutzer: $APP_ADMIN_USER, Kamera-Overlay: $CAMERA_OVERLAY"
 
 # ---------------------------------------------------------------------------------------------
 step "Pakete installieren"
@@ -163,7 +168,26 @@ nmcli connection add type wifi ifname "$WIFI_IF" con-name "$HOTSPOT_CON" ssid "$
 	wifi-sec.psk "$HOTSPOT_PSK" || fail "Hotspot-Profil konnte nicht angelegt werden"
 
 # ---------------------------------------------------------------------------------------------
-step "Kamera pruefen (nur zur Info)"
+step "Kamera-Konfiguration in config.txt sicherstellen"
+# camera_auto_detect kann sich auf einen falschen Sensor festlegen (getestet: erkennt die
+# AZ-Delivery-V1.3-Kamera, ein OV5647-Klon ohne EEPROM, als imx708 und findet dann nichts).
+# Deshalb hier den Sensor-Overlay explizit setzen statt der Auto-Erkennung zu vertrauen.
+# vc4-kms-v3d muss aktiv sein, sonst bindet der ISP-Treiber nie und rpicam-apps meldet
+# "platform not supported", auch wenn der Sensor selbst erkannt wird.
+CONFIG_TXT=$BOOT/config.txt
+[[ -f $CONFIG_TXT ]] || fail "$CONFIG_TXT fehlt"
+sed -i -E 's/^#?dtoverlay=vc4-kms-v3d(,.*)?$/dtoverlay=vc4-kms-v3d,cma-128/' "$CONFIG_TXT"
+grep -qxF "dtoverlay=vc4-kms-v3d,cma-128" "$CONFIG_TXT" || echo "dtoverlay=vc4-kms-v3d,cma-128" >> "$CONFIG_TXT"
+sed -i -E '/^dtoverlay=(imx219|imx477|imx708|ov5647|ov9281)$/d' "$CONFIG_TXT"
+echo "dtoverlay=$CAMERA_OVERLAY" >> "$CONFIG_TXT"
+grep -qxF "camera_auto_detect=1" "$CONFIG_TXT" || echo "camera_auto_detect=1" >> "$CONFIG_TXT"
+# DietPi laedt das ISP-Modul nicht automatisch beim Booten (anders als Raspberry Pi OS);
+# ohne es bleibt rpicam-apps auch mit korrektem Sensor-Overlay bei "no cameras available".
+echo "bcm2835-isp" > /etc/modules-load.d/rpicam-isp.conf
+
+# ---------------------------------------------------------------------------------------------
+step "Kamera pruefen (nur zur Info, Overlay-Aenderungen wirken erst nach dem Neustart unten)"
+modprobe bcm2835-isp 2> /dev/null || true
 rpicam-hello --list-cameras 2>&1 | head -20 || true
 
 # ---------------------------------------------------------------------------------------------

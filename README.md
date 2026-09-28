@@ -26,8 +26,11 @@ Ein Passwort, das mit `wrong` beginnt, lässt die simulierte Verbindung fehlschl
 2. Auf der Boot-Partition (FAT) eintragen:
    - `dietpi-wifi.txt`: Heim-WLAN (`aWIFI_SSID[0]`, `aWIFI_KEY[0]`). Nur für die Installation beim ersten Start nötig.
    - `dietpi.txt`: `AUTO_SETUP_AUTOMATED=1`, `AUTO_SETUP_NET_WIFI_ENABLED=1`, `AUTO_SETUP_NET_WIFI_COUNTRY_CODE=DE`, Passwort, Hostname (`rpicam`).
-   - `rpicam.env`: `HOTSPOT_SSID`, `HOTSPOT_PSK` (8-63 Zeichen), `APP_ADMIN_USER`, `APP_ADMIN_PASSWORD`. Keine Anführungszeichen und keine Backslashes.
-   - `config.txt`: `camera_auto_detect=1` und `dtoverlay=vc4-kms-v3d,cma-128`.
+   - `rpicam.env`: `HOTSPOT_SSID`, `HOTSPOT_PSK` (8-63 Zeichen), `APP_ADMIN_USER`, `APP_ADMIN_PASSWORD`. Optional `CAMERA_OVERLAY`
+     (Standard `ov5647` - die AZ-Delivery-V1.3-Kamera, für die dieses Projekt gebaut ist; bei einer anderen Kamera z.B. `imx708`
+     eintragen). Keine Anführungszeichen und keine Backslashes.
+   - `config.txt`: nichts Kameraspezifisches nötig, das Setup-Skript trägt `dtoverlay=vc4-kms-v3d,cma-128` und den
+     Sensor-Overlay aus `CAMERA_OVERLAY` selbst ein (siehe unten, "Bekannte Grenzen").
    - `cmdline.txt`: am Ende der einen Zeile ` cfg80211.ieee80211_regdom=DE`.
 3. `deploy/Automation_Custom_Script.sh` auf die Boot-Partition kopieren und die App dorthin veröffentlichen:
    ```bash
@@ -36,8 +39,9 @@ Ein Passwort, das mit `wrong` beginnt, lässt die simulierte Verbindung fehlschl
    ```
    Architekturneutral, nicht mit `-r linux-arm64`: Das Paket ist reine verwaltete Bibliotheken und läuft so auch auf dem Entwicklungsrechner (Rauchtest).
 4. SD-Karte in den Pi, Strom an. Beim ersten Start (ca. 10-20 Minuten, braucht das Heim-WLAN als Internet) installiert das Skript
-   NetworkManager, `rpicam-apps-lite`, die .NET-10-Laufzeit, die App als systemd-Dienst `rpicam` und das Hotspot-Profil.
-   Danach löscht es die Zugangsdaten (`rpicam.env`, WLAN-Schlüssel) und startet neu.
+   NetworkManager, `rpicam-apps-lite`, die .NET-10-Laufzeit, die App als systemd-Dienst `rpicam`, das Hotspot-Profil und die
+   Kamera-Konfiguration in `config.txt` (siehe "Kamera-Hardware" unten). Danach löscht es die Zugangsdaten (`rpicam.env`,
+   WLAN-Schlüssel) und startet neu.
 5. Verbinde dich mit dem Hotspot und öffne **http://192.168.4.1**.
 
 Das Protokoll der Einrichtung steht in `/boot/firmware/rpicam-setup.log` (auf der SD-Karte, am PC lesbar).
@@ -50,8 +54,17 @@ Nach einem Fehler lässt sich das Skript per SSH wiederholen: `bash /boot/Automa
 | Dienst | `systemctl status rpicam`, Logs: `journalctl -u rpicam` |
 | Konfiguration | `/etc/rpicam/rpicam.env` (nur root), Änderungen mit `systemctl restart rpicam` übernehmen |
 | Daten | `/var/lib/rpicam` (`images/`, `thumbs/`, `settings.json`, `keys/`) |
-| Kamera prüfen | `rpicam-hello --list-cameras` |
+| Kamera prüfen | `rpicam-hello --list-cameras`, bei "No cameras available": `i2cdetect -y 10` (Bus leer = Kabel/Hardware, Adresse ohne Antwort = Treiber/Overlay) |
 | Netzwerk | `nmcli device`, `nmcli connection show` (Hotspot-Profil: `rpicam-hotspot`) |
+
+## Kamera-Hardware
+
+Getestet mit der **AZ-Delivery Raspberry Pi Kamera V1.3** (OmniVision OV5647, 5 MP, kein EEPROM). `camera_auto_detect` allein
+funktioniert damit nicht zuverlässig (erkennt teils fälschlich `imx708`); das Setup-Skript trägt daher explizit
+`dtoverlay=$CAMERA_OVERLAY` (Standard `ov5647`) und `dtoverlay=vc4-kms-v3d,cma-128` in `config.txt` ein und lädt zusätzlich
+das ISP-Kernelmodul (`bcm2835-isp`) über `/etc/modules-load.d/`, das DietPi anders als Raspberry Pi OS nicht automatisch
+lädt - ohne beides meldet `rpicam-hello` "no cameras available" bzw. "platform not supported", obwohl der Sensor am I2C-Bus
+antwortet. Eine andere Kamera anschließen: `CAMERA_OVERLAY` in `rpicam.env` auf den passenden Sensor-Overlay-Namen setzen.
 
 ## Bekannte Grenzen
 
