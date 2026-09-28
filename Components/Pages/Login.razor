@@ -1,0 +1,46 @@
+@page "/login"
+@layout LoginLayout
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+
+<PageTitle>@Locals.PageTitleLogin</PageTitle>
+
+@* A plain HTML form: the browser posts it to /account/login, which sets the auth cookie. *@
+<form method="post" action="/account/login" class="login-card">
+    <AntiforgeryToken />
+    <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+
+    <h1>@Locals.LoginTitle</h1>
+
+    @if (ErrorMessage is not null)
+    {
+        <p class="login-error" role="alert">@ErrorMessage</p>
+    }
+
+    <label>
+        @Locals.LoginUser
+        <input name="Username" autocomplete="username" autofocus required />
+    </label>
+    <label>
+        @Locals.LoginPassword
+        <input name="Password" type="password" autocomplete="current-password" required />
+    </label>
+    <button type="submit">@Locals.LoginButton</button>
+</form>
+
+@code {
+    [SupplyParameterFromQuery]
+    private string? Error { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private string? ErrorMessage => Error switch
+    {
+        "invalid" => Locals.LoginFailed,
+        "locked" => Locals.LoginLocked,
+        "config" => Locals.LoginNotConfigured,
+        "expired" => Locals.LoginExpired,
+        _ => null,
+    };
+}

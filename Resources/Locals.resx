@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppTitle" xml:space="preserve">
+    <value>RPi Camera</value>
+  </data>
+  <data name="NavGallery" xml:space="preserve">
+    <value>Gallery</value>
+  </data>
+  <data name="NavWifi" xml:space="preserve">
+    <value>Wi-Fi</value>
+  </data>
+  <data name="NavSettings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="NavLogout" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="ToggleTheme" xml:space="preserve">
+    <value>Toggle light/dark</value>
+  </data>
+  <data name="PageTitleGallery" xml:space="preserve">
+    <value>Gallery</value>
+  </data>
+  <data name="PageTitleWifi" xml:space="preserve">
+    <value>Wi-Fi</value>
+  </data>
+  <data name="PageTitleSettings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="PageTitleLogin" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="PageTitleNotFound" xml:space="preserve">
+    <value>Not found</value>
+  </data>
+  <data name="PageTitleError" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="CommonDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="CommonCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="CommonClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="CommonDownload" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="CommonSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="CommonRefresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="CommonConnect" xml:space="preserve">
+    <value>Connect</value>
+  </data>
+  <data name="LoginTitle" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="LoginUser" xml:space="preserve">
+    <value>User name</value>
+  </data>
+  <data name="LoginPassword" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="LoginButton" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="LoginFailed" xml:space="preserve">
+    <value>Wrong user name or password.</value>
+  </data>
+  <data name="LoginLocked" xml:space="preserve">
+    <value>Too many attempts. Try again in a minute.</value>
+  </data>
+  <data name="LoginExpired" xml:space="preserve">
+    <value>The page has expired. Please try again.</value>
+  </data>
+  <data name="LoginNotConfigured" xml:space="preserve">
+    <value>No login is configured on this device.</value>
+  </data>
+  <data name="GalleryHeading" xml:space="preserve">
+    <value>Captured images</value>
+  </data>
+  <data name="GalleryCapture" xml:space="preserve">
+    <value>Capture now</value>
+  </data>
+  <data name="GalleryCapturing" xml:space="preserve">
+    <value>Capturing…</value>
+  </data>
+  <data name="GallerySelectAll" xml:space="preserve">
+    <value>Select all on this page</value>
+  </data>
+  <data name="GalleryDownloadSelected" xml:space="preserve">
+    <value>Download selected (ZIP)</value>
+  </data>
+  <data name="GalleryDeleteSelected" xml:space="preserve">
+    <value>Delete selected</value>
+  </data>
+  <data name="GallerySelectedCount" xml:space="preserve">
+    <value>{0} selected</value>
+  </data>
+  <data name="GalleryImageCount" xml:space="preserve">
+    <value>{0} images</value>
+  </data>
+  <data name="GalleryEmpty" xml:space="preserve">
+    <value>No images yet. Press "Capture now".</value>
+  </data>
+  <data name="GalleryDeleteTitle" xml:space="preserve">
+    <value>Delete images</value>
+  </data>
+  <data name="GalleryDeleteConfirm" xml:space="preserve">
+    <value>Delete {0} image(s) permanently?</value>
+  </data>
+  <data name="GalleryDeleted" xml:space="preserve">
+    <value>{0} image(s) deleted.</value>
+  </data>
+  <data name="GalleryCaptured" xml:space="preserve">
+    <value>Image captured.</value>
+  </data>
+  <data name="GalleryCaptureFailed" xml:space="preserve">
+    <value>Capture failed: {0}</value>
+  </data>
+  <data name="WifiHeading" xml:space="preserve">
+    <value>Wi-Fi</value>
+  </data>
+  <data name="WifiStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="WifiModeHotspot" xml:space="preserve">
+    <value>Hotspot active</value>
+  </data>
+  <data name="WifiModeClient" xml:space="preserve">
+    <value>Connected to a network</value>
+  </data>
+  <data name="WifiModeDisconnected" xml:space="preserve">
+    <value>Not connected</value>
+  </data>
+  <data name="WifiModeUnavailable" xml:space="preserve">
+    <value>No Wi-Fi adapter found</value>
+  </data>
+  <data name="WifiNetwork" xml:space="preserve">
+    <value>Network</value>
+  </data>
+  <data name="WifiAddress" xml:space="preserve">
+    <value>IP address</value>
+  </data>
+  <data name="WifiActivateHotspot" xml:space="preserve">
+    <value>Activate hotspot</value>
+  </data>
+  <data name="WifiScan" xml:space="preserve">
+    <value>Scan for networks</value>
+  </data>
+  <data name="WifiScanning" xml:space="preserve">
+    <value>Scanning…</value>
+  </data>
+  <data name="WifiScanHint" xml:space="preserve">
+    <value>While the hotspot is active, a scan can briefly interrupt connected devices.</value>
+  </data>
+  <data name="WifiScanFailed" xml:space="preserve">
+    <value>Scan failed: {0}</value>
+  </data>
+  <data name="WifiNoNetworks" xml:space="preserve">
+    <value>No networks found. Press "Scan for networks".</value>
+  </data>
+  <data name="WifiAvailable" xml:space="preserve">
+    <value>Available networks</value>
+  </data>
+  <data name="WifiPasswordLabel" xml:space="preserve">
+    <value>Wi-Fi password</value>
+  </data>
+  <data name="WifiConnectTo" xml:space="preserve">
+    <value>Connect to {0}</value>
+  </data>
+  <data name="WifiOpenNetwork" xml:space="preserve">
+    <value>Open network, no password required.</value>
+  </data>
+  <data name="WifiEnterpriseUnsupported" xml:space="preserve">
+    <value>Enterprise networks (802.1X) are not supported.</value>
+  </data>
+  <data name="WifiInvalidPassword" xml:space="preserve">
+    <value>The password must have 8 to 63 characters.</value>
+  </data>
+  <data name="WifiBusy" xml:space="preserve">
+    <value>Another change is still in progress.</value>
+  </data>
+  <data name="WifiSwitchInfo" xml:space="preserve">
+    <value>The device is switching. If you are connected through the hotspot, this page loses its connection. Connect your device to the same network as the camera and open http://{0}.local. If the connection fails, the hotspot starts again automatically.</value>
+  </data>
+  <data name="WifiHotspotInfo" xml:space="preserve">
+    <value>Switching to the hotspot. Connect your device to the hotspot Wi-Fi and open http://192.168.4.1.</value>
+  </data>
+  <data name="WifiWorking" xml:space="preserve">
+    <value>Switching in progress…</value>
+  </data>
+  <data name="WifiResultConnected" xml:space="preserve">
+    <value>Connected to "{0}".</value>
+  </data>
+  <data name="WifiResultFailed" xml:space="preserve">
+    <value>Connecting to "{0}" failed. The hotspot is active again.</value>
+  </data>
+  <data name="WifiResultHotspot" xml:space="preserve">
+    <value>Hotspot activated.</value>
+  </data>
+  <data name="WifiResultHotspotFailed" xml:space="preserve">
+    <value>The hotspot could not be started.</value>
+  </data>
+  <data name="WifiResultRemoved" xml:space="preserve">
+    <value>Network "{0}" removed. The device is back on its hotspot.</value>
+  </data>
+  <data name="WifiLastResult" xml:space="preserve">
+    <value>Last change</value>
+  </data>
+  <data name="SettingsHeading" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsCapture" xml:space="preserve">
+    <value>Capture</value>
+  </data>
+  <data name="SettingsInterval" xml:space="preserve">
+    <value>Automatic capture every … seconds (0 = off)</value>
+  </data>
+  <data name="SettingsIntervalHelp" xml:space="preserve">
+    <value>At least 5 seconds, or 0 for manual captures only.</value>
+  </data>
+  <data name="SettingsWidth" xml:space="preserve">
+    <value>Width (px)</value>
+  </data>
+  <data name="SettingsHeight" xml:space="preserve">
+    <value>Height (px)</value>
+  </data>
+  <data name="SettingsQuality" xml:space="preserve">
+    <value>JPEG quality</value>
+  </data>
+  <data name="SettingsSaved" xml:space="preserve">
+    <value>Settings saved.</value>
+  </data>
+  <data name="SettingsSavedNetworks" xml:space="preserve">
+    <value>Saved Wi-Fi networks</value>
+  </data>
+  <data name="SettingsNoSavedNetworks" xml:space="preserve">
+    <value>No saved networks. The device uses its hotspot.</value>
+  </data>
+  <data name="SettingsActive" xml:space="preserve">
+    <value>active</value>
+  </data>
+  <data name="SettingsRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="SettingsRemoveTitle" xml:space="preserve">
+    <value>Remove network</value>
+  </data>
+  <data name="SettingsRemoveConfirm" xml:space="preserve">
+    <value>Remove "{0}"? If it is the active connection, the device switches back to its hotspot and this page is no longer reachable through that network.</value>
+  </data>
+  <data name="SettingsTime" xml:space="preserve">
+    <value>System time</value>
+  </data>
+  <data name="SettingsTimeDevice" xml:space="preserve">
+    <value>Device time</value>
+  </data>
+  <data name="SettingsTimeSet" xml:space="preserve">
+    <value>Use time from this browser</value>
+  </data>
+  <data name="SettingsTimeHint" xml:space="preserve">
+    <value>Without internet the device has no reliable clock. Set it here so images get correct timestamps.</value>
+  </data>
+  <data name="SettingsTimeDone" xml:space="preserve">
+    <value>System time set.</value>
+  </data>
+  <data name="SettingsTimeFailed" xml:space="preserve">
+    <value>System time could not be set.</value>
+  </data>
+  <data name="SettingsLanguage" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="SettingsStorage" xml:space="preserve">
+    <value>Storage</value>
+  </data>
+  <data name="SettingsStorageInfo" xml:space="preserve">
+    <value>{0} images, {1} MB free. Capturing pauses below {2} MB free.</value>
+  </data>
+  <data name="ErrorHeading" xml:space="preserve">
+    <value>An error occurred.</value>
+  </data>
+  <data name="ErrorRequestId" xml:space="preserve">
+    <value>Request ID</value>
+  </data>
+  <data name="NotFoundHeading" xml:space="preserve">
+    <value>Page not found</value>
+  </data>
+  <data name="NotFoundText" xml:space="preserve">
+    <value>The page you are looking for does not exist.</value>
+  </data>
+  <data name="NotFoundHome" xml:space="preserve">
+    <value>Back to the gallery</value>
+  </data>
+</root>

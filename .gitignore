@@ -1,0 +1,41 @@
+## .NET build results
+bin/
+obj/
+[Dd]ebug/
+[Dd]ebug[Pp]ublic/
+[Rr]elease/
+x64/
+x86/
+[Ll]og/
+[Ll]ogs/
+
+## Rider / Visual Studio / VS Code
+.idea/
+.vs/
+*.user
+*.suo
+.vscode/*
+!.vscode/extensions.json
+
+## NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+
+## EF Core / SQLite local dev database
+*.db
+*.db-shm
+*.db-wal
+
+## User secrets / local overrides (never commit real secrets)
+appsettings.*.local.json
+secrets.json
+
+## OS junk
+.DS_Store
+Thumbs.db
+
+## RpiCam
+/data/
+/publish/

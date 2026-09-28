@@ -1,0 +1,42 @@
+<MudDialog>
+    <DialogContent>
+        <MudTextField T="string" @bind-Value="_password" Label="@Locals.WifiPasswordLabel"
+                      Variant="Variant.Outlined" Immediate="true" AutoFocus="true"
+                      InputType="@(_show ? InputType.Text : InputType.Password)"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@(_show ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                      OnAdornmentClick="() => _show = !_show"
+                      Error="@(_password.Length > 0 && !Valid)" ErrorText="@Locals.WifiInvalidPassword"
+                      OnKeyDown="OnKeyDown" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => MudDialog.Cancel()">@Locals.CommonCancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="!Valid" OnClick="Submit">@Locals.CommonConnect</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private string _password = "";
+    private bool _show;
+
+    private bool Valid => _password.Length > 0 && NetworkServiceBase.IsValidPassword(_password);
+
+    private void Submit()
+    {
+        if (Valid)
+        {
+            MudDialog.Close(DialogResult.Ok(_password));
+        }
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            Submit();
+        }
+    }
+}

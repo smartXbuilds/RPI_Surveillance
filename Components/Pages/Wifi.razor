@@ -1,0 +1,293 @@
+@page "/wifi"
+@implements IDisposable
+@inject INetworkService Network
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<PageTitle>@Locals.PageTitleWifi</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">@Locals.WifiHeading</MudText>
+
+@if (Network.Busy)
+{
+    <MudAlert Severity="Severity.Normal" Variant="Variant.Outlined" Class="mb-4">
+        @Locals.WifiWorking
+        <MudProgressLinear Indeterminate="true" Class="mt-2" />
+    </MudAlert>
+}
+else if (Network.LastEvent is { } last)
+{
+    <MudAlert Severity="@SeverityOf(last)" Variant="Variant.Outlined" Class="mb-4">
+        <b>@Locals.WifiLastResult</b> (@last.At.ToString("G")): @TextOf(last)
+    </MudAlert>
+}
+
+@if (_switchInfo is not null)
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-4">@_switchInfo</MudAlert>
+}
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6" Class="mb-2">@Locals.WifiStatus</MudText>
+    @if (_status is null)
+    {
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+    }
+    else
+    {
+        <MudStack Spacing="1" AlignItems="AlignItems.Start">
+            <MudChip T="string" Color="@ModeColor" Icon="@ModeIcon">@ModeText</MudChip>
+            @if (!string.IsNullOrEmpty(_status.Ssid))
+            {
+                <MudText>@Locals.WifiNetwork: <b>@_status.Ssid</b></MudText>
+            }
+            @if (!string.IsNullOrEmpty(_status.IpAddress))
+            {
+                <MudText>@Locals.WifiAddress: @_status.IpAddress</MudText>
+            }
+            @if (_status.Mode != NetworkMode.Hotspot && _status.Mode != NetworkMode.Unavailable)
+            {
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.WifiTethering"
+                           Disabled="Network.Busy" OnClick="ActivateHotspotAsync">
+                    @Locals.WifiActivateHotspot
+                </MudButton>
+            }
+        </MudStack>
+    }
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4">
+    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
+        <MudText Typo="Typo.h6">@Locals.WifiAvailable</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                   Disabled="@(_scanning || Network.Busy)" OnClick="ScanAsync">
+            @(_scanning ? Locals.WifiScanning : Locals.WifiScan)
+        </MudButton>
+    </MudStack>
+
+    @if (_status?.Mode == NetworkMode.Hotspot)
+    {
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Locals.WifiScanHint</MudText>
+    }
+    @if (_scanning)
+    {
+        <MudProgressLinear Indeterminate="true" Class="my-2" />
+    }
+
+    @if (_networks.Count == 0 && !_scanning)
+    {
+        <MudText Class="mt-2 mud-text-secondary">@Locals.WifiNoNetworks</MudText>
+    }
+
+    @foreach (var network in _networks)
+    {
+        <MudDivider Class="my-1" />
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="py-1">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@SignalIcon(network.Signal)" />
+                <MudStack Spacing="0">
+                    <MudText>@network.Ssid</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        @(network.IsOpen ? "" : network.Security) @(network.InUse ? "· " + Locals.WifiModeClient : "")
+                    </MudText>
+                </MudStack>
+            </MudStack>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                @if (!network.IsOpen)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
+                }
+                <MudButton Variant="Variant.Outlined" Disabled="@(Network.Busy || network.InUse)"
+                           OnClick="() => ConnectAsync(network)">
+                    @Locals.CommonConnect
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    }
+</MudPaper>
+
+@code {
+    private NetworkStatus? _status;
+    private IReadOnlyList<WifiNetwork> _networks = [];
+    private bool _scanning;
+    private string? _switchInfo;
+    private readonly CancellationTokenSource _cts = new();
+
+    private string Host => Environment.MachineName.ToLowerInvariant();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Network.Changed += OnNetworkChanged;
+        await RefreshStatusAsync();
+        _ = PollAsync(_cts.Token);
+        try
+        {
+            // Cached scan results only: an actual scan interrupts the hotspot, so it is left to the button.
+            _networks = await Network.ScanAsync(rescan: false, _cts.Token);
+        }
+        catch (NetworkException)
+        {
+            // No cached results yet; the user can press "Scan".
+        }
+    }
+
+    public void Dispose()
+    {
+        Network.Changed -= OnNetworkChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+    private void OnNetworkChanged() => _ = InvokeSafeAsync(async () =>
+    {
+        // The switch is over: the "Last change" alert now tells the outcome, the how-to hint is stale.
+        if (!Network.Busy)
+        {
+            _switchInfo = null;
+        }
+        await RefreshStatusAsync();
+    });
+
+    // Status can change behind our back (the backend switches in the background), so poll it.
+    private async Task PollAsync(CancellationToken ct)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(4));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                await InvokeSafeAsync(RefreshStatusAsync);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task InvokeSafeAsync(Func<Task> work)
+    {
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                await work();
+                StateHasChanged();
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // The circuit went away while the timer fired.
+        }
+    }
+
+    private async Task RefreshStatusAsync() => _status = await Network.GetStatusAsync(_cts.Token);
+
+    private async Task ScanAsync()
+    {
+        _scanning = true;
+        try
+        {
+            _networks = await Network.ScanAsync(rescan: true, _cts.Token);
+        }
+        catch (NetworkException ex)
+        {
+            Snackbar.Add(string.Format(Locals.WifiScanFailed, ex.Message), Severity.Error);
+        }
+        finally
+        {
+            _scanning = false;
+        }
+    }
+
+    private async Task ConnectAsync(WifiNetwork network)
+    {
+        if (network.IsEnterprise)
+        {
+            Snackbar.Add(Locals.WifiEnterpriseUnsupported, Severity.Warning);
+            return;
+        }
+
+        string? password = null;
+        if (!network.IsOpen)
+        {
+            var dialog = await Dialogs.ShowAsync<ConnectDialog>(
+                string.Format(Locals.WifiConnectTo, network.Ssid),
+                new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+            var result = await dialog.Result;
+            if (result is null || result.Canceled)
+            {
+                return;
+            }
+            password = result.Data as string;
+        }
+
+        switch (Network.BeginConnect(network.Ssid, password))
+        {
+            case RequestResult.Accepted:
+                _switchInfo = string.Format(Locals.WifiSwitchInfo, Host);
+                break;
+            case RequestResult.Busy:
+                Snackbar.Add(Locals.WifiBusy, Severity.Warning);
+                break;
+            default:
+                Snackbar.Add(Locals.WifiInvalidPassword, Severity.Error);
+                break;
+        }
+    }
+
+    private Task ActivateHotspotAsync()
+    {
+        switch (Network.BeginHotspot())
+        {
+            case RequestResult.Accepted:
+                _switchInfo = Locals.WifiHotspotInfo;
+                break;
+            case RequestResult.Busy:
+                Snackbar.Add(Locals.WifiBusy, Severity.Warning);
+                break;
+        }
+        return Task.CompletedTask;
+    }
+
+    private static string SignalIcon(int signal) => signal switch
+    {
+        >= 75 => Icons.Material.Filled.SignalWifi4Bar,
+        >= 50 => Icons.Material.Filled.NetworkWifi3Bar,
+        >= 25 => Icons.Material.Filled.NetworkWifi2Bar,
+        _ => Icons.Material.Filled.NetworkWifi1Bar,
+    };
+
+    private string ModeText => _status?.Mode switch
+    {
+        NetworkMode.Hotspot => Locals.WifiModeHotspot,
+        NetworkMode.Client => Locals.WifiModeClient,
+        NetworkMode.Disconnected => Locals.WifiModeDisconnected,
+        _ => Locals.WifiModeUnavailable,
+    };
+
+    private Color ModeColor => _status?.Mode switch
+    {
+        NetworkMode.Hotspot => Color.Info,
+        NetworkMode.Client => Color.Success,
+        NetworkMode.Disconnected => Color.Warning,
+        _ => Color.Error,
+    };
+
+    private string ModeIcon => _status?.Mode == NetworkMode.Hotspot ? Icons.Material.Filled.WifiTethering : Icons.Material.Filled.Wifi;
+
+    private static Severity SeverityOf(NetworkEvent e) => e.Outcome switch
+    {
+        NetworkOutcome.Connected or NetworkOutcome.HotspotActive or NetworkOutcome.Removed => Severity.Success,
+        NetworkOutcome.ConnectFailed => Severity.Warning,
+        _ => Severity.Error,
+    };
+
+    private static string TextOf(NetworkEvent e) => e.Outcome switch
+    {
+        NetworkOutcome.Connected => string.Format(Locals.WifiResultConnected, e.Ssid),
+        NetworkOutcome.ConnectFailed => string.Format(Locals.WifiResultFailed, e.Ssid),
+        NetworkOutcome.HotspotActive => Locals.WifiResultHotspot,
+        NetworkOutcome.Removed => string.Format(Locals.WifiResultRemoved, e.Ssid),
+        _ => Locals.WifiResultHotspotFailed,
+    };
+}

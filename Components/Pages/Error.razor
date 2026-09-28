@@ -1,0 +1,27 @@
+@page "/Error"
+@using System.Diagnostics
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+
+<PageTitle>@Locals.PageTitleError</PageTitle>
+
+<div class="login-shell">
+    <div class="login-card">
+        <h1>@Locals.ErrorHeading</h1>
+        @if (!string.IsNullOrEmpty(RequestId))
+        {
+            <p>@Locals.ErrorRequestId: <code>@RequestId</code></p>
+        }
+        <a href="/">@Locals.NotFoundHome</a>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

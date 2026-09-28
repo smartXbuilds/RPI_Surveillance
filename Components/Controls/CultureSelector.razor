@@ -1,0 +1,41 @@
+@using System.Globalization
+@using Microsoft.Extensions.Options
+@using Microsoft.AspNetCore.Localization
+@inject NavigationManager Nav
+@inject IOptions<RequestLocalizationOptions> RequestLocalizationOptions
+
+<MudSelect T="CultureInfo" Value="CultureInfo.CurrentCulture" ValueChanged="OnCultureChanged"
+           Variant="Variant.Outlined" Dense="true" Margin="Margin.Dense" Style="min-width:170px; max-width:100%;">
+    @foreach (var culture in SupportedCultures)
+    {
+        <MudSelectItem Value="@culture">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudText Style="font-size:1.2em; line-height:1;">@GetFlagEmoji(culture.Name.Split('-').Last())</MudText>
+                <MudText Typo="Typo.body2">@culture.NativeName</MudText>
+            </MudStack>
+        </MudSelectItem>
+    }
+</MudSelect>
+
+@code {
+    private CultureInfo[] SupportedCultures =>
+        RequestLocalizationOptions.Value.SupportedCultures?.ToArray() ?? [];
+
+    private void OnCultureChanged(CultureInfo culture)
+    {
+        if (culture.Equals(CultureInfo.CurrentCulture))
+        {
+            return;
+        }
+
+        var returnUri = new Uri(Nav.Uri).GetComponents(UriComponents.PathAndQuery, UriFormat.Unescaped);
+
+        Nav.NavigateTo(
+            $"Culture/Set?culture={Uri.EscapeDataString(culture.Name)}&redirectUri={Uri.EscapeDataString(returnUri)}",
+            forceLoad: true);
+    }
+
+    // Converts a 2-letter ISO country code to a flag emoji using Unicode regional indicator symbols.
+    private static string GetFlagEmoji(string countryCode) =>
+        string.Concat(countryCode.ToUpperInvariant().Select(c => char.ConvertFromUtf32(c + 0x1F1E6 - 'A')));
+}

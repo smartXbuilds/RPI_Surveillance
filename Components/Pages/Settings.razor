@@ -1,0 +1,180 @@
+@page "/settings"
+@implements IDisposable
+@inject CameraSettingsStore Store
+@inject INetworkService Network
+@inject ImageStore Images
+@inject ISystemTimeService Clock
+@inject Microsoft.Extensions.Options.IOptions<RpiCamOptions> Options
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>@Locals.PageTitleSettings</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">@Locals.SettingsHeading</MudText>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6" Class="mb-2">@Locals.SettingsCapture</MudText>
+    <MudStack Spacing="3">
+        <MudNumericField T="int" @bind-Value="_interval" Label="@Locals.SettingsInterval"
+                         HelperText="@Locals.SettingsIntervalHelp" Min="0" Variant="Variant.Outlined" />
+        <MudStack Row="true" Spacing="2">
+            <MudNumericField T="int" @bind-Value="_width" Label="@Locals.SettingsWidth"
+                             Min="CameraSettings.MinSide" Max="CameraSettings.MaxSide" Variant="Variant.Outlined" />
+            <MudNumericField T="int" @bind-Value="_height" Label="@Locals.SettingsHeight"
+                             Min="CameraSettings.MinSide" Max="CameraSettings.MaxSide" Variant="Variant.Outlined" />
+        </MudStack>
+        <div>
+            <MudText Typo="Typo.body2">@Locals.SettingsQuality: @_quality</MudText>
+            <MudSlider T="int" @bind-Value="_quality" Min="10" Max="100" Color="Color.Primary" />
+        </div>
+        <div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="SaveAsync">@Locals.CommonSave</MudButton>
+        </div>
+    </MudStack>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6" Class="mb-2">@Locals.SettingsSavedNetworks</MudText>
+    @if (_saved.Count == 0)
+    {
+        <MudText Class="mud-text-secondary">@Locals.SettingsNoSavedNetworks</MudText>
+    }
+    @foreach (var network in _saved)
+    {
+        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="py-1">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.Wifi" />
+                <MudText>@network.Ssid</MudText>
+                @if (network.Active)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">@Locals.SettingsActive</MudChip>
+                }
+            </MudStack>
+            <MudStack Row="true" Spacing="1">
+                @if (!network.Active)
+                {
+                    <MudButton Variant="Variant.Outlined" Disabled="Network.Busy" OnClick="() => ConnectSaved(network)">
+                        @Locals.CommonConnect
+                    </MudButton>
+                }
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete"
+                           Disabled="Network.Busy" OnClick="() => RemoveAsync(network)">
+                    @Locals.SettingsRemove
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    }
+    @if (_networkInfo is not null)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">@_networkInfo</MudAlert>
+    }
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6" Class="mb-2">@Locals.SettingsTime</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">@Locals.SettingsTimeHint</MudText>
+    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText>@Locals.SettingsTimeDevice: <b>@DateTime.Now.ToString("G")</b></MudText>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Schedule" OnClick="SetTimeAsync">
+            @Locals.SettingsTimeSet
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6" Class="mb-2">@Locals.SettingsStorage</MudText>
+    <MudText>@string.Format(Locals.SettingsStorageInfo, Images.List().Count, Images.FreeMegabytes(), Options.Value.MinFreeMegabytes)</MudText>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4">
+    <MudText Typo="Typo.h6" Class="mb-2">@Locals.SettingsLanguage</MudText>
+    <CultureSelector />
+</MudPaper>
+
+@code {
+    private int _interval;
+    private int _width;
+    private int _height;
+    private int _quality;
+    private IReadOnlyList<SavedNetwork> _saved = [];
+    private string? _networkInfo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var current = Store.Current;
+        (_interval, _width, _height, _quality) = (current.IntervalSeconds, current.Width, current.Height, current.Quality);
+
+        Network.Changed += OnNetworkChanged;
+        await LoadSavedAsync();
+    }
+
+    public void Dispose() => Network.Changed -= OnNetworkChanged;
+
+    private void OnNetworkChanged() => _ = InvokeAsync(async () =>
+    {
+        if (!Network.Busy)
+        {
+            _networkInfo = null;
+        }
+        await LoadSavedAsync();
+        StateHasChanged();
+    });
+
+    private async Task LoadSavedAsync()
+    {
+        try
+        {
+            _saved = await Network.GetSavedNetworksAsync();
+        }
+        catch (NetworkException ex)
+        {
+            _saved = [];
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        await Store.UpdateAsync(new CameraSettings(_interval, _width, _height, _quality));
+        // Show what was actually stored, the store clamps values to what the camera accepts.
+        var saved = Store.Current;
+        (_interval, _width, _height, _quality) = (saved.IntervalSeconds, saved.Width, saved.Height, saved.Quality);
+        Snackbar.Add(Locals.SettingsSaved, Severity.Success);
+    }
+
+    private void ConnectSaved(SavedNetwork network) => Report(Network.BeginConnectSaved(network.Uuid), Locals.WifiSwitchInfo);
+
+    private async Task RemoveAsync(SavedNetwork network)
+    {
+        var confirmed = await Dialogs.ShowMessageBoxAsync(
+            Locals.SettingsRemoveTitle,
+            string.Format(Locals.SettingsRemoveConfirm, network.Ssid),
+            yesText: Locals.SettingsRemove,
+            cancelText: Locals.CommonCancel);
+        if (confirmed == true)
+        {
+            Report(Network.BeginRemove(network.Uuid), Locals.WifiHotspotInfo);
+        }
+    }
+
+    private void Report(RequestResult result, string acceptedInfo)
+    {
+        if (result == RequestResult.Accepted)
+        {
+            _networkInfo = string.Format(acceptedInfo, Environment.MachineName.ToLowerInvariant());
+        }
+        else
+        {
+            Snackbar.Add(Locals.WifiBusy, Severity.Warning);
+        }
+    }
+
+    private async Task SetTimeAsync()
+    {
+        var milliseconds = await JS.InvokeAsync<long>("Date.now");
+        var ok = await Clock.SetAsync(DateTimeOffset.FromUnixTimeMilliseconds(milliseconds));
+        Snackbar.Add(ok ? Locals.SettingsTimeDone : Locals.SettingsTimeFailed, ok ? Severity.Success : Severity.Error);
+    }
+}

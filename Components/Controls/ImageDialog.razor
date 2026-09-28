@@ -1,0 +1,42 @@
+@inject ImageStore Images
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <img src="/api/images/@Name" alt="@Name" style="display:block; max-width:100%; max-height:70vh; margin:0 auto;" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton StartIcon="@Icons.Material.Filled.Download" Href="@($"/api/images/{Name}?download=true")" download="@Name">
+            @Locals.CommonDownload
+        </MudButton>
+        <MudButton Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="DeleteAsync">
+            @Locals.CommonDelete
+        </MudButton>
+        <MudSpacer />
+        <MudButton OnClick="() => MudDialog.Close()">@Locals.CommonClose</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = "";
+
+    private async Task DeleteAsync()
+    {
+        var confirmed = await Dialogs.ShowMessageBoxAsync(
+            Locals.GalleryDeleteTitle,
+            string.Format(Locals.GalleryDeleteConfirm, 1),
+            yesText: Locals.CommonDelete,
+            cancelText: Locals.CommonCancel);
+        if (confirmed != true)
+        {
+            return;
+        }
+        Snackbar.Add(string.Format(Locals.GalleryDeleted, Images.Delete([Name])), Severity.Success);
+        MudDialog.Close();
+    }
+}

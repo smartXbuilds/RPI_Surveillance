@@ -1,0 +1,10 @@
+@page "/not-found"
+@layout Layout.MainLayout
+@attribute [AllowAnonymous]
+
+<PageTitle>@Locals.PageTitleNotFound</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">@Locals.NotFoundHeading</MudText>
+<MudText Class="mb-8">@Locals.NotFoundText</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">@Locals.NotFoundHome</MudButton>

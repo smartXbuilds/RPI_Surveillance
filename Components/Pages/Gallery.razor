@@ -1,0 +1,163 @@
+@page "/"
+@implements IDisposable
+@inject ImageStore Images
+@inject ICameraService Camera
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<PageTitle>@Locals.PageTitleGallery</PageTitle>
+
+<MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+    <MudText Typo="Typo.h5">@Locals.GalleryHeading</MudText>
+    <MudChip T="string" Size="Size.Small">@string.Format(Locals.GalleryImageCount, _all.Count)</MudChip>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PhotoCamera"
+               Disabled="_capturing" OnClick="CaptureAsync">
+        @(_capturing ? Locals.GalleryCapturing : Locals.GalleryCapture)
+    </MudButton>
+</MudStack>
+
+@if (_all.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@Locals.GalleryEmpty</MudAlert>
+}
+else
+{
+    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+        <MudCheckBox T="bool" Value="AllOnPageSelected" ValueChanged="SetAllOnPage" Label="@Locals.GallerySelectAll" />
+        @if (_selected.Count > 0)
+        {
+            <MudText Typo="Typo.body2">@string.Format(Locals.GallerySelectedCount, _selected.Count)</MudText>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download" Href="@ZipUrl" download>
+                @Locals.GalleryDownloadSelected
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete"
+                       OnClick="DeleteSelectedAsync">
+                @Locals.GalleryDeleteSelected
+            </MudButton>
+        }
+    </MudStack>
+
+    <MudGrid Spacing="2">
+        @foreach (var image in PageItems)
+        {
+            <MudItem xs="6" sm="4" md="3" lg="2" @key="image.Name">
+                <MudPaper Outlined="true" Class="gallery-tile">
+                    <img class="gallery-thumb" src="/api/thumbs/@image.Name" loading="lazy" alt="@image.Name"
+                         @onclick="() => OpenAsync(image)" />
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="px-1">
+                        <MudCheckBox T="bool" Value="_selected.Contains(image.Name)"
+                                     ValueChanged="@(v => Toggle(image.Name, v))" Size="Size.Small" />
+                        <MudText Typo="Typo.caption">@image.Taken.ToString("g")</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+
+    @if (PageCount > 1)
+    {
+        <MudPagination Class="mt-4 d-flex justify-center" Count="PageCount" Selected="_page"
+                       SelectedChanged="@(p => _page = p)" />
+    }
+}
+
+@code {
+    private const int PageSize = 24;
+
+    private IReadOnlyList<ImageInfo> _all = [];
+    private readonly HashSet<string> _selected = [];
+    private int _page = 1;
+    private bool _capturing;
+
+    private int PageCount => Math.Max(1, (int)Math.Ceiling(_all.Count / (double)PageSize));
+
+    private IEnumerable<ImageInfo> PageItems => _all.Skip((_page - 1) * PageSize).Take(PageSize);
+
+    private bool AllOnPageSelected => PageItems.Any() && PageItems.All(i => _selected.Contains(i.Name));
+
+    private string ZipUrl =>
+        "/api/images/zip?" + string.Join('&', _selected.Take(Endpoints.MaxZipImages).Select(n => "name=" + Uri.EscapeDataString(n)));
+
+    protected override void OnInitialized()
+    {
+        Reload();
+        Images.Changed += OnImagesChanged;
+    }
+
+    public void Dispose() => Images.Changed -= OnImagesChanged;
+
+    // Raised by the scheduler and by other browsers too, so the gallery follows what is on disk.
+    private void OnImagesChanged() => _ = InvokeAsync(() =>
+    {
+        Reload();
+        StateHasChanged();
+    });
+
+    private void Reload()
+    {
+        _all = Images.List();
+        _selected.IntersectWith(_all.Select(i => i.Name));
+        _page = Math.Min(_page, PageCount);
+    }
+
+    private void Toggle(string name, bool selected)
+    {
+        if (selected)
+        {
+            _selected.Add(name);
+        }
+        else
+        {
+            _selected.Remove(name);
+        }
+    }
+
+    private void SetAllOnPage(bool selected)
+    {
+        foreach (var image in PageItems)
+        {
+            Toggle(image.Name, selected);
+        }
+    }
+
+    private async Task CaptureAsync()
+    {
+        _capturing = true;
+        try
+        {
+            await Camera.CaptureAsync();
+            Snackbar.Add(Locals.GalleryCaptured, Severity.Success);
+        }
+        catch (Exception ex) when (ex is CameraException or IOException)
+        {
+            Snackbar.Add(string.Format(Locals.GalleryCaptureFailed, ex.Message), Severity.Error);
+        }
+        finally
+        {
+            _capturing = false;
+        }
+    }
+
+    private async Task OpenAsync(ImageInfo image)
+    {
+        var parameters = new DialogParameters<ImageDialog> { { d => d.Name, image.Name } };
+        await Dialogs.ShowAsync<ImageDialog>(image.Taken.ToString("G"), parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseButton = true });
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        var confirmed = await Dialogs.ShowMessageBoxAsync(
+            Locals.GalleryDeleteTitle,
+            string.Format(Locals.GalleryDeleteConfirm, _selected.Count),
+            yesText: Locals.CommonDelete,
+            cancelText: Locals.CommonCancel);
+        if (confirmed != true)
+        {
+            return;
+        }
+        var deleted = Images.Delete(_selected.ToList());
+        Snackbar.Add(string.Format(Locals.GalleryDeleted, deleted), Severity.Success);
+    }
+}
