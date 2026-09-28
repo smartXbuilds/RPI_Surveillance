@@ -248,5 +248,107 @@ namespace RpiCam.Resources
         public static string NotFoundText => ResourceManager.GetString("NotFoundText", resourceCulture)!;
 
         public static string NotFoundHome => ResourceManager.GetString("NotFoundHome", resourceCulture)!;
+
+        public static string NavLive => ResourceManager.GetString("NavLive", resourceCulture)!;
+
+        public static string NavMotion => ResourceManager.GetString("NavMotion", resourceCulture)!;
+
+        public static string PageTitleLive => ResourceManager.GetString("PageTitleLive", resourceCulture)!;
+
+        public static string PageTitleMotion => ResourceManager.GetString("PageTitleMotion", resourceCulture)!;
+
+        public static string SettingsImageControls => ResourceManager.GetString("SettingsImageControls", resourceCulture)!;
+
+        public static string SettingsBrightness => ResourceManager.GetString("SettingsBrightness", resourceCulture)!;
+
+        public static string SettingsContrast => ResourceManager.GetString("SettingsContrast", resourceCulture)!;
+
+        public static string SettingsSaturation => ResourceManager.GetString("SettingsSaturation", resourceCulture)!;
+
+        public static string SettingsSharpness => ResourceManager.GetString("SettingsSharpness", resourceCulture)!;
+
+        public static string SettingsEv => ResourceManager.GetString("SettingsEv", resourceCulture)!;
+
+        public static string SettingsAwb => ResourceManager.GetString("SettingsAwb", resourceCulture)!;
+
+        public static string SettingsHFlip => ResourceManager.GetString("SettingsHFlip", resourceCulture)!;
+
+        public static string SettingsVFlip => ResourceManager.GetString("SettingsVFlip", resourceCulture)!;
+
+        public static string AwbAuto => ResourceManager.GetString("AwbAuto", resourceCulture)!;
+
+        public static string AwbIncandescent => ResourceManager.GetString("AwbIncandescent", resourceCulture)!;
+
+        public static string AwbTungsten => ResourceManager.GetString("AwbTungsten", resourceCulture)!;
+
+        public static string AwbFluorescent => ResourceManager.GetString("AwbFluorescent", resourceCulture)!;
+
+        public static string AwbIndoor => ResourceManager.GetString("AwbIndoor", resourceCulture)!;
+
+        public static string AwbDaylight => ResourceManager.GetString("AwbDaylight", resourceCulture)!;
+
+        public static string AwbCloudy => ResourceManager.GetString("AwbCloudy", resourceCulture)!;
+
+        public static string MotionHeading => ResourceManager.GetString("MotionHeading", resourceCulture)!;
+
+        public static string MotionEnabled => ResourceManager.GetString("MotionEnabled", resourceCulture)!;
+
+        public static string MotionEnabledHelp => ResourceManager.GetString("MotionEnabledHelp", resourceCulture)!;
+
+        public static string MotionSensitivity => ResourceManager.GetString("MotionSensitivity", resourceCulture)!;
+
+        public static string MotionSensitivityHelp => ResourceManager.GetString("MotionSensitivityHelp", resourceCulture)!;
+
+        public static string MotionReaction => ResourceManager.GetString("MotionReaction", resourceCulture)!;
+
+        public static string MotionModeInterval => ResourceManager.GetString("MotionModeInterval", resourceCulture)!;
+
+        public static string MotionModeStream => ResourceManager.GetString("MotionModeStream", resourceCulture)!;
+
+        public static string MotionStreamSeconds => ResourceManager.GetString("MotionStreamSeconds", resourceCulture)!;
+
+        public static string MotionIntervalCaptureSeconds => ResourceManager.GetString("MotionIntervalCaptureSeconds", resourceCulture)!;
+
+        public static string MotionIntervalDurationSeconds => ResourceManager.GetString("MotionIntervalDurationSeconds", resourceCulture)!;
+
+        public static string MotionCooldownSeconds => ResourceManager.GetString("MotionCooldownSeconds", resourceCulture)!;
+
+        public static string MotionCooldownHelp => ResourceManager.GetString("MotionCooldownHelp", resourceCulture)!;
+
+        public static string MotionSaved => ResourceManager.GetString("MotionSaved", resourceCulture)!;
+
+        public static string MotionStatus => ResourceManager.GetString("MotionStatus", resourceCulture)!;
+
+        public static string MotionStatusDisabled => ResourceManager.GetString("MotionStatusDisabled", resourceCulture)!;
+
+        public static string MotionStatusWatching => ResourceManager.GetString("MotionStatusWatching", resourceCulture)!;
+
+        public static string MotionStatusReacting => ResourceManager.GetString("MotionStatusReacting", resourceCulture)!;
+
+        public static string MotionStatusCooldown => ResourceManager.GetString("MotionStatusCooldown", resourceCulture)!;
+
+        public static string MotionEvents => ResourceManager.GetString("MotionEvents", resourceCulture)!;
+
+        public static string MotionNoEvents => ResourceManager.GetString("MotionNoEvents", resourceCulture)!;
+
+        public static string MotionEventPictures => ResourceManager.GetString("MotionEventPictures", resourceCulture)!;
+
+        public static string MotionClipDelete => ResourceManager.GetString("MotionClipDelete", resourceCulture)!;
+
+        public static string MotionClipDeleteTitle => ResourceManager.GetString("MotionClipDeleteTitle", resourceCulture)!;
+
+        public static string MotionClipDeleteConfirm => ResourceManager.GetString("MotionClipDeleteConfirm", resourceCulture)!;
+
+        public static string LiveHeading => ResourceManager.GetString("LiveHeading", resourceCulture)!;
+
+        public static string LiveStart => ResourceManager.GetString("LiveStart", resourceCulture)!;
+
+        public static string LiveStop => ResourceManager.GetString("LiveStop", resourceCulture)!;
+
+        public static string LiveHint => ResourceManager.GetString("LiveHint", resourceCulture)!;
+
+        public static string LiveError => ResourceManager.GetString("LiveError", resourceCulture)!;
+
+        public static string LiveBusy => ResourceManager.GetString("LiveBusy", resourceCulture)!;
     }
 }

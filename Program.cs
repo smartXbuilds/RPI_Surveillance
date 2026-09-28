@@ -66,21 +66,30 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddSingleton<LoginThrottle>();
 
 builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
+builder.Services.AddSingleton<CameraGate>();
 builder.Services.AddSingleton<CameraSettingsStore>();
+builder.Services.AddSingleton<MotionSettingsStore>();
+builder.Services.AddSingleton<MotionEventLog>();
 builder.Services.AddSingleton<ImageStore>();
+builder.Services.AddSingleton<ClipStore>();
+builder.Services.AddSingleton<LiveStreamSession>();
 builder.Services.AddSingleton<ISystemTimeService, SystemTimeService>();
 if (options.Simulate)
 {
     builder.Services.AddSingleton<ICameraService, SimulatedCameraService>();
     builder.Services.AddSingleton<INetworkService, SimulatedNetworkService>();
+    builder.Services.AddSingleton<IVideoPipeline, SimulatedVideoPipeline>();
 }
 else
 {
     builder.Services.AddSingleton<ICameraService, RpiCameraService>();
     builder.Services.AddSingleton<INetworkService, NmcliNetworkService>();
+    builder.Services.AddSingleton<IVideoPipeline, RpiVideoPipeline>();
 }
 builder.Services.AddHostedService<CaptureScheduler>();
 builder.Services.AddHostedService<HotspotBootstrapper>();
+builder.Services.AddSingleton<MotionDetectionService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MotionDetectionService>());
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -123,6 +132,8 @@ app.UseAntiforgery();
 app.MapStaticAssets().AllowAnonymous();
 app.MapAccountEndpoints();
 app.MapImageEndpoints();
+app.MapMotionEndpoints();
+app.MapStreamEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

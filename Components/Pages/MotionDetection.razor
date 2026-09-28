@@ -1,0 +1,174 @@
+@page "/motion"
+@implements IDisposable
+@inject MotionSettingsStore Store
+@inject MotionDetectionService Motion
+@inject MotionEventLog Events
+@inject ClipStore Clips
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<PageTitle>@Locals.PageTitleMotion</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">@Locals.MotionHeading</MudText>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudStack Spacing="3">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudSwitch T="bool" @bind-Value="_enabled" Color="Color.Primary" Label="@Locals.MotionEnabled" />
+            <MudChip T="string" Size="Size.Small" Color="@StatusColor">@StatusText</MudChip>
+        </MudStack>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">@Locals.MotionEnabledHelp</MudText>
+
+        <div>
+            <MudText Typo="Typo.body2">@Locals.MotionSensitivity: @_sensitivity</MudText>
+            <MudSlider T="int" @bind-Value="_sensitivity" Min="MotionSettings.MinSensitivity" Max="MotionSettings.MaxSensitivity" Color="Color.Primary" />
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@Locals.MotionSensitivityHelp</MudText>
+        </div>
+
+        <MudSelect T="MotionReactionMode" @bind-Value="_mode" Label="@Locals.MotionReaction" Variant="Variant.Outlined">
+            <MudSelectItem T="MotionReactionMode" Value="MotionReactionMode.Interval">@Locals.MotionModeInterval</MudSelectItem>
+            <MudSelectItem T="MotionReactionMode" Value="MotionReactionMode.Stream">@Locals.MotionModeStream</MudSelectItem>
+        </MudSelect>
+
+        @if (_mode == MotionReactionMode.Stream)
+        {
+            <MudNumericField T="int" @bind-Value="_streamSeconds" Label="@Locals.MotionStreamSeconds"
+                              Min="MotionSettings.MinSeconds" Max="MotionSettings.MaxStreamSeconds" Variant="Variant.Outlined" />
+        }
+        else
+        {
+            <MudStack Row="true" Spacing="2">
+                <MudNumericField T="int" @bind-Value="_intervalCaptureSeconds" Label="@Locals.MotionIntervalCaptureSeconds"
+                                  Min="MotionSettings.MinSeconds" Max="MotionSettings.MaxIntervalCaptureSeconds" Variant="Variant.Outlined" />
+                <MudNumericField T="int" @bind-Value="_intervalDurationSeconds" Label="@Locals.MotionIntervalDurationSeconds"
+                                  Min="MotionSettings.MinSeconds" Max="MotionSettings.MaxIntervalDurationSeconds" Variant="Variant.Outlined" />
+            </MudStack>
+        }
+
+        <MudNumericField T="int" @bind-Value="_cooldownSeconds" Label="@Locals.MotionCooldownSeconds"
+                          HelperText="@Locals.MotionCooldownHelp" Min="0" Max="MotionSettings.MaxCooldownSeconds" Variant="Variant.Outlined" />
+
+        <div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="SaveAsync">@Locals.CommonSave</MudButton>
+        </div>
+    </MudStack>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4">
+    <MudText Typo="Typo.h6" Class="mb-2">@Locals.MotionEvents</MudText>
+    @if (_events.Count == 0)
+    {
+        <MudText Class="mud-text-secondary">@Locals.MotionNoEvents</MudText>
+    }
+    else
+    {
+        @foreach (var ev in _events)
+        {
+            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="py-1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@(ev.Kind == MotionEventKind.Stream ? Icons.Material.Filled.Videocam : Icons.Material.Filled.PhotoCamera)" />
+                    <MudText>@ev.Time.ToString("g")</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@EventDetail(ev)</MudText>
+                </MudStack>
+                @if (ev.Kind == MotionEventKind.Stream && ev.ClipName is { } clip && Clips.ResolvePath(clip) is not null)
+                {
+                    <MudStack Row="true" Spacing="1">
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Download"
+                                   Href="@($"/api/motion/clips/{clip}?download=true")" download>
+                            @Locals.CommonDownload
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete"
+                                   OnClick="@(() => DeleteClipAsync(clip))">
+                            @Locals.MotionClipDelete
+                        </MudButton>
+                    </MudStack>
+                }
+            </MudStack>
+        }
+    }
+</MudPaper>
+
+@code {
+    private bool _enabled;
+    private int _sensitivity;
+    private MotionReactionMode _mode;
+    private int _streamSeconds;
+    private int _intervalCaptureSeconds;
+    private int _intervalDurationSeconds;
+    private int _cooldownSeconds;
+    private IReadOnlyList<MotionEvent> _events = [];
+
+    private Color StatusColor => Motion.Status switch
+    {
+        MotionStatus.Reacting => Color.Error,
+        MotionStatus.Cooldown => Color.Warning,
+        MotionStatus.Watching => Color.Success,
+        _ => Color.Default,
+    };
+
+    private string StatusText => Motion.Status switch
+    {
+        MotionStatus.Disabled => Locals.MotionStatusDisabled,
+        MotionStatus.Watching => Locals.MotionStatusWatching,
+        MotionStatus.Reacting => Locals.MotionStatusReacting,
+        MotionStatus.Cooldown => Locals.MotionStatusCooldown,
+        _ => "",
+    };
+
+    protected override void OnInitialized()
+    {
+        var current = Store.Current;
+        (_enabled, _sensitivity, _mode, _streamSeconds, _intervalCaptureSeconds, _intervalDurationSeconds, _cooldownSeconds) =
+            (current.Enabled, current.Sensitivity, current.Mode, current.StreamSeconds, current.IntervalCaptureSeconds,
+             current.IntervalDurationSeconds, current.CooldownSeconds);
+        _events = Events.List();
+
+        Motion.StatusChanged += OnStatusChanged;
+        Events.Changed += OnEventsChanged;
+    }
+
+    public void Dispose()
+    {
+        Motion.StatusChanged -= OnStatusChanged;
+        Events.Changed -= OnEventsChanged;
+    }
+
+    private void OnStatusChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void OnEventsChanged() => _ = InvokeAsync(() =>
+    {
+        _events = Events.List();
+        StateHasChanged();
+    });
+
+    private static string EventDetail(MotionEvent ev) => ev.Kind switch
+    {
+        MotionEventKind.Stream => ev.ClipName ?? "",
+        _ => string.Format(Locals.MotionEventPictures, ev.PictureCount ?? 0),
+    };
+
+    private async Task SaveAsync()
+    {
+        await Store.UpdateAsync(new MotionSettings(
+            _enabled, _mode, _sensitivity, _streamSeconds, _intervalCaptureSeconds, _intervalDurationSeconds, _cooldownSeconds));
+        var saved = Store.Current;
+        (_enabled, _sensitivity, _mode, _streamSeconds, _intervalCaptureSeconds, _intervalDurationSeconds, _cooldownSeconds) =
+            (saved.Enabled, saved.Sensitivity, saved.Mode, saved.StreamSeconds, saved.IntervalCaptureSeconds,
+             saved.IntervalDurationSeconds, saved.CooldownSeconds);
+        Snackbar.Add(Locals.MotionSaved, Severity.Success);
+    }
+
+    private async Task DeleteClipAsync(string name)
+    {
+        var confirmed = await Dialogs.ShowMessageBoxAsync(
+            Locals.MotionClipDeleteTitle,
+            Locals.MotionClipDeleteConfirm,
+            yesText: Locals.MotionClipDelete,
+            cancelText: Locals.CommonCancel);
+        if (confirmed == true)
+        {
+            Clips.Delete(name);
+        }
+    }
+}

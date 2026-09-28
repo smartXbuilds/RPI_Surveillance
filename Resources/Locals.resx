@@ -70,6 +70,12 @@
   <data name="NavSettings" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="NavLive" xml:space="preserve">
+    <value>Live view</value>
+  </data>
+  <data name="NavMotion" xml:space="preserve">
+    <value>Motion detection</value>
+  </data>
   <data name="NavLogout" xml:space="preserve">
     <value>Sign out</value>
   </data>
@@ -84,6 +90,12 @@
   </data>
   <data name="PageTitleSettings" xml:space="preserve">
     <value>Settings</value>
+  </data>
+  <data name="PageTitleLive" xml:space="preserve">
+    <value>Live view</value>
+  </data>
+  <data name="PageTitleMotion" xml:space="preserve">
+    <value>Motion detection</value>
   </data>
   <data name="PageTitleLogin" xml:space="preserve">
     <value>Sign in</value>
@@ -292,6 +304,54 @@
   <data name="SettingsQuality" xml:space="preserve">
     <value>JPEG quality</value>
   </data>
+  <data name="SettingsImageControls" xml:space="preserve">
+    <value>Image controls</value>
+  </data>
+  <data name="SettingsBrightness" xml:space="preserve">
+    <value>Brightness</value>
+  </data>
+  <data name="SettingsContrast" xml:space="preserve">
+    <value>Contrast</value>
+  </data>
+  <data name="SettingsSaturation" xml:space="preserve">
+    <value>Saturation</value>
+  </data>
+  <data name="SettingsSharpness" xml:space="preserve">
+    <value>Sharpness</value>
+  </data>
+  <data name="SettingsEv" xml:space="preserve">
+    <value>Exposure compensation (EV)</value>
+  </data>
+  <data name="SettingsAwb" xml:space="preserve">
+    <value>White balance</value>
+  </data>
+  <data name="SettingsHFlip" xml:space="preserve">
+    <value>Flip image horizontally</value>
+  </data>
+  <data name="SettingsVFlip" xml:space="preserve">
+    <value>Flip image vertically</value>
+  </data>
+  <data name="AwbAuto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="AwbIncandescent" xml:space="preserve">
+    <value>Incandescent</value>
+  </data>
+  <data name="AwbTungsten" xml:space="preserve">
+    <value>Tungsten</value>
+  </data>
+  <data name="AwbFluorescent" xml:space="preserve">
+    <value>Fluorescent</value>
+  </data>
+  <data name="AwbIndoor" xml:space="preserve">
+    <value>Indoor</value>
+  </data>
+  <data name="AwbDaylight" xml:space="preserve">
+    <value>Daylight</value>
+  </data>
+  <data name="AwbCloudy" xml:space="preserve">
+    <value>Cloudy</value>
+  </data>
   <data name="SettingsSaved" xml:space="preserve">
     <value>Settings saved.</value>
   </data>
@@ -339,6 +399,99 @@
   </data>
   <data name="SettingsStorageInfo" xml:space="preserve">
     <value>{0} images, {1} MB free. Capturing pauses below {2} MB free.</value>
+  </data>
+  <data name="MotionHeading" xml:space="preserve">
+    <value>Motion detection</value>
+  </data>
+  <data name="MotionEnabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="MotionEnabledHelp" xml:space="preserve">
+    <value>The camera checks for motion continuously in the background. Every check briefly takes over the camera, so scheduled/manual captures may be delayed by a moment.</value>
+  </data>
+  <data name="MotionSensitivity" xml:space="preserve">
+    <value>Sensitivity</value>
+  </data>
+  <data name="MotionSensitivityHelp" xml:space="preserve">
+    <value>Higher reacts to smaller changes; lower needs more of the image to change. Start in the middle and adjust after watching a few events.</value>
+  </data>
+  <data name="MotionReaction" xml:space="preserve">
+    <value>On motion</value>
+  </data>
+  <data name="MotionModeInterval" xml:space="preserve">
+    <value>Take pictures at an interval</value>
+  </data>
+  <data name="MotionModeStream" xml:space="preserve">
+    <value>Record a video clip</value>
+  </data>
+  <data name="MotionStreamSeconds" xml:space="preserve">
+    <value>Clip length (seconds)</value>
+  </data>
+  <data name="MotionIntervalCaptureSeconds" xml:space="preserve">
+    <value>Picture every … seconds</value>
+  </data>
+  <data name="MotionIntervalDurationSeconds" xml:space="preserve">
+    <value>… for a total of this many seconds</value>
+  </data>
+  <data name="MotionCooldownSeconds" xml:space="preserve">
+    <value>Pause before watching again (seconds)</value>
+  </data>
+  <data name="MotionCooldownHelp" xml:space="preserve">
+    <value>Prevents one event from immediately triggering the next.</value>
+  </data>
+  <data name="MotionSaved" xml:space="preserve">
+    <value>Settings saved.</value>
+  </data>
+  <data name="MotionStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="MotionStatusDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="MotionStatusWatching" xml:space="preserve">
+    <value>Watching, no motion right now</value>
+  </data>
+  <data name="MotionStatusReacting" xml:space="preserve">
+    <value>Motion detected, capturing…</value>
+  </data>
+  <data name="MotionStatusCooldown" xml:space="preserve">
+    <value>Motion detected, pausing before watching again</value>
+  </data>
+  <data name="MotionEvents" xml:space="preserve">
+    <value>Recent events</value>
+  </data>
+  <data name="MotionNoEvents" xml:space="preserve">
+    <value>No events recorded yet.</value>
+  </data>
+  <data name="MotionEventPictures" xml:space="preserve">
+    <value>{0} picture(s)</value>
+  </data>
+  <data name="MotionClipDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="MotionClipDeleteTitle" xml:space="preserve">
+    <value>Delete clip</value>
+  </data>
+  <data name="MotionClipDeleteConfirm" xml:space="preserve">
+    <value>Delete this clip? This cannot be undone.</value>
+  </data>
+  <data name="LiveHeading" xml:space="preserve">
+    <value>Live view</value>
+  </data>
+  <data name="LiveStart" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="LiveStop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="LiveHint" xml:space="preserve">
+    <value>Not recorded, not saved to the SD card. Uses the camera exclusively while running, and costs noticeable CPU and Wi-Fi bandwidth on this device — stop it when you are done watching.</value>
+  </data>
+  <data name="LiveError" xml:space="preserve">
+    <value>The stream stopped unexpectedly. Try starting it again.</value>
+  </data>
+  <data name="LiveBusy" xml:space="preserve">
+    <value>The camera is busy with a scheduled or motion capture; the stream will start as soon as it is free.</value>
   </data>
   <data name="ErrorHeading" xml:space="preserve">
     <value>An error occurred.</value>

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using RpiCam.Resources;
 using RpiCam.Services;
 
 namespace RpiCam;
@@ -128,6 +129,77 @@ public static class Endpoints
             return path is null
                 ? Results.NotFound()
                 : Results.File(path, "image/jpeg", download == true ? name : null, enableRangeProcessing: true);
+        });
+    }
+
+    /// <summary>Motion-triggered video clip download.</summary>
+    public static void MapMotionEndpoints(this WebApplication app)
+    {
+        app.MapGet("/api/motion/clips/{name}", (string name, bool? download, ClipStore clips) =>
+        {
+            var path = clips.ResolvePath(name);
+            return path is null
+                ? Results.NotFound()
+                : Results.File(path, "video/mp4", download == true ? name : null, enableRangeProcessing: true);
+        });
+    }
+
+    /// <summary>
+    /// The live view: rpicam-vid piped through ffmpeg into a fragmented MP4, relayed straight to the
+    /// response body. Nothing is written to disk. Only one viewer at a time (the camera gate), a
+    /// second request is told the camera is busy instead of queueing indefinitely.
+    /// </summary>
+    public static void MapStreamEndpoints(this WebApplication app)
+    {
+        var log = app.Logger;
+        app.MapGet("/api/stream/live", async (HttpContext ctx, CameraGate gate, IVideoPipeline video, LiveStreamSession session) =>
+        {
+            if (!gate.TryAcquire(out var handle))
+            {
+                ctx.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                await ctx.Response.WriteAsync(Locals.LiveBusy);
+                return;
+            }
+            using var acquired = handle;
+
+            // The Live page's Stop button cancels this token directly (same process, Blazor
+            // Server): removing the <video> element alone does not reliably abort the underlying
+            // HTTP connection quickly enough, verified on the device (rpicam-vid/ffmpeg kept
+            // running for a long time afterwards). RequestAborted stays linked in as a fallback
+            // for a closed tab or lost connection.
+            var sessionToken = session.Begin();
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(ctx.RequestAborted, sessionToken);
+            var ct = linked.Token;
+
+            ILiveStream? stream = null;
+            try
+            {
+                stream = await video.StartLiveAsync(ct);
+                ctx.Response.ContentType = "video/mp4";
+                ctx.Response.Headers.CacheControl = "no-store";
+                await stream.Output.CopyToAsync(ctx.Response.Body, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // The viewer stopped the stream or navigated away; nothing to report.
+            }
+            catch (CameraException ex)
+            {
+                log.LogWarning("Live stream failed: {Message}", ex.Message);
+                if (!ctx.Response.HasStarted)
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    await ctx.Response.WriteAsync(ex.Message);
+                }
+            }
+            finally
+            {
+                if (stream is not null)
+                {
+                    await stream.DisposeAsync();
+                }
+                session.End(sessionToken);
+            }
         });
     }
 

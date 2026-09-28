@@ -83,6 +83,11 @@ apt-get install -y network-manager dnsmasq-base nftables iptables avahi-daemon c
 # The lite variant has no preview/GUI dependencies; fall back to the full one if it is not offered.
 apt-get install -y rpicam-apps-lite || apt-get install -y rpicam-apps || fail "rpicam-apps nicht installierbar"
 command -v rpicam-still > /dev/null || fail "rpicam-still fehlt nach der Installation"
+# ffmpeg remuxes the Pi's hardware H.264 output into browser-playable fragmented MP4, for the
+# live view and for motion-triggered video clips. No re-encoding (-c copy), so it is cheap on the
+# Pi 3 A+'s CPU either way.
+apt-get install -y ffmpeg || fail "ffmpeg nicht installierbar"
+command -v ffmpeg > /dev/null || fail "ffmpeg fehlt nach der Installation"
 
 # ---------------------------------------------------------------------------------------------
 step ".NET 10 (ASP.NET Core Runtime) installieren"
@@ -181,13 +186,15 @@ grep -qxF "dtoverlay=vc4-kms-v3d,cma-128" "$CONFIG_TXT" || echo "dtoverlay=vc4-k
 sed -i -E '/^dtoverlay=(imx219|imx477|imx708|ov5647|ov9281)$/d' "$CONFIG_TXT"
 echo "dtoverlay=$CAMERA_OVERLAY" >> "$CONFIG_TXT"
 grep -qxF "camera_auto_detect=1" "$CONFIG_TXT" || echo "camera_auto_detect=1" >> "$CONFIG_TXT"
-# DietPi laedt das ISP-Modul nicht automatisch beim Booten (anders als Raspberry Pi OS);
-# ohne es bleibt rpicam-apps auch mit korrektem Sensor-Overlay bei "no cameras available".
-echo "bcm2835-isp" > /etc/modules-load.d/rpicam-isp.conf
+# DietPi laedt weder das ISP- noch das Hardware-H264-Encoder-Modul automatisch beim Booten
+# (anders als Raspberry Pi OS): ohne bcm2835-isp bleibt rpicam-apps bei "no cameras available",
+# ohne bcm2835-codec meldet rpicam-vid "failed to open V4L2 H264 encoder" (fuer Livestream/Clips).
+printf 'bcm2835-isp\nbcm2835-codec\n' > /etc/modules-load.d/rpicam-isp.conf
 
 # ---------------------------------------------------------------------------------------------
 step "Kamera pruefen (nur zur Info, Overlay-Aenderungen wirken erst nach dem Neustart unten)"
 modprobe bcm2835-isp 2> /dev/null || true
+modprobe bcm2835-codec 2> /dev/null || true
 rpicam-hello --list-cameras 2>&1 | head -20 || true
 
 # ---------------------------------------------------------------------------------------------

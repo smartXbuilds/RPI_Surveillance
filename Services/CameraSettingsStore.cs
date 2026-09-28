@@ -3,7 +3,31 @@ using Microsoft.Extensions.Options;
 
 namespace RpiCam.Services;
 
-public sealed record CameraSettings(int IntervalSeconds = 0, int Width = 1920, int Height = 1080, int Quality = 85)
+/// <summary>Auto white balance mode, passed to rpicam-still as --awb.</summary>
+public enum AwbMode
+{
+    Auto,
+    Incandescent,
+    Tungsten,
+    Fluorescent,
+    Indoor,
+    Daylight,
+    Cloudy,
+}
+
+public sealed record CameraSettings(
+    int IntervalSeconds = 0,
+    int Width = 1920,
+    int Height = 1080,
+    int Quality = 85,
+    double Brightness = 0,
+    double Contrast = 1,
+    double Saturation = 1,
+    double Sharpness = 1,
+    double Ev = 0,
+    AwbMode Awb = AwbMode.Auto,
+    bool HFlip = false,
+    bool VFlip = false)
 {
     public const int MinSide = 320;
     public const int MaxSide = 4608;
@@ -16,6 +40,11 @@ public sealed record CameraSettings(int IntervalSeconds = 0, int Width = 1920, i
         Width = Math.Clamp(Width, MinSide, MaxSide),
         Height = Math.Clamp(Height, MinSide, MaxSide),
         Quality = Math.Clamp(Quality, 10, 100),
+        Brightness = Math.Clamp(Brightness, -1, 1),
+        Contrast = Math.Clamp(Contrast, 0, 2),
+        Saturation = Math.Clamp(Saturation, 0, 2),
+        Sharpness = Math.Clamp(Sharpness, 0, 2),
+        Ev = Math.Clamp(Ev, -2, 2),
     };
 }
 

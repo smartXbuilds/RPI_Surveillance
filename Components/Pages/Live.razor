@@ -1,0 +1,70 @@
+@page "/live"
+@implements IDisposable
+@inject LiveStreamSession Session
+
+<PageTitle>@Locals.PageTitleLive</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">@Locals.LiveHeading</MudText>
+
+<MudPaper Outlined="true" Class="pa-4">
+    <MudStack Spacing="3">
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@Locals.LiveHint</MudAlert>
+
+        @if (_streaming)
+        {
+            <video @key="_streamKey" class="live-video" controls autoplay muted playsinline
+                   src="@($"/api/stream/live?k={_streamKey}")" @onerror="OnVideoError"></video>
+        }
+
+        <div>
+            @if (!_streaming)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="Start">@Locals.LiveStart</MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Stop"
+                           OnClick="Stop">@Locals.LiveStop</MudButton>
+            }
+        </div>
+    </MudStack>
+</MudPaper>
+
+<style>
+    .live-video {
+        width: 100%;
+        max-width: 960px;
+        background: black;
+        border-radius: 4px;
+    }
+</style>
+
+@code {
+    private bool _streaming;
+    private int _streamKey;
+
+    private void Start()
+    {
+        _streamKey++;
+        _streaming = true;
+    }
+
+    private void Stop()
+    {
+        _streaming = false;
+        // Dropping the <video> element alone is not enough: verified on the device that the
+        // browser does not reliably abort the underlying HTTP connection quickly, leaving
+        // rpicam-vid/ffmpeg running. Cancel the server-side session explicitly instead.
+        Session.Stop();
+    }
+
+    private void OnVideoError()
+    {
+        _streaming = false;
+        Session.Stop();
+    }
+
+    // Covers navigating away within the app or closing the tab without pressing Stop.
+    public void Dispose() => Session.Stop();
+}

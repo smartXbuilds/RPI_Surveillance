@@ -28,6 +28,42 @@
             <MudText Typo="Typo.body2">@Locals.SettingsQuality: @_quality</MudText>
             <MudSlider T="int" @bind-Value="_quality" Min="10" Max="100" Color="Color.Primary" />
         </div>
+    </MudStack>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6" Class="mb-2">@Locals.SettingsImageControls</MudText>
+    <MudStack Spacing="3">
+        <div>
+            <MudText Typo="Typo.body2">@Locals.SettingsBrightness: @_brightness.ToString("0.00")</MudText>
+            <MudSlider T="double" @bind-Value="_brightness" Min="-1" Max="1" Step="0.05" Color="Color.Primary" />
+        </div>
+        <div>
+            <MudText Typo="Typo.body2">@Locals.SettingsContrast: @_contrast.ToString("0.00")</MudText>
+            <MudSlider T="double" @bind-Value="_contrast" Min="0" Max="2" Step="0.05" Color="Color.Primary" />
+        </div>
+        <div>
+            <MudText Typo="Typo.body2">@Locals.SettingsSaturation: @_saturation.ToString("0.00")</MudText>
+            <MudSlider T="double" @bind-Value="_saturation" Min="0" Max="2" Step="0.05" Color="Color.Primary" />
+        </div>
+        <div>
+            <MudText Typo="Typo.body2">@Locals.SettingsSharpness: @_sharpness.ToString("0.00")</MudText>
+            <MudSlider T="double" @bind-Value="_sharpness" Min="0" Max="2" Step="0.05" Color="Color.Primary" />
+        </div>
+        <div>
+            <MudText Typo="Typo.body2">@Locals.SettingsEv: @_ev.ToString("0.0")</MudText>
+            <MudSlider T="double" @bind-Value="_ev" Min="-2" Max="2" Step="0.1" Color="Color.Primary" />
+        </div>
+        <MudSelect T="AwbMode" @bind-Value="_awb" Label="@Locals.SettingsAwb" Variant="Variant.Outlined">
+            @foreach (var mode in Enum.GetValues<AwbMode>())
+            {
+                <MudSelectItem T="AwbMode" Value="mode">@AwbLabel(mode)</MudSelectItem>
+            }
+        </MudSelect>
+        <MudStack Row="true" Spacing="4">
+            <MudSwitch T="bool" @bind-Value="_hFlip" Color="Color.Primary" Label="@Locals.SettingsHFlip" />
+            <MudSwitch T="bool" @bind-Value="_vFlip" Color="Color.Primary" Label="@Locals.SettingsVFlip" />
+        </MudStack>
         <div>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
                        OnClick="SaveAsync">@Locals.CommonSave</MudButton>
@@ -98,6 +134,14 @@
     private int _width;
     private int _height;
     private int _quality;
+    private double _brightness;
+    private double _contrast;
+    private double _saturation;
+    private double _sharpness;
+    private double _ev;
+    private AwbMode _awb;
+    private bool _hFlip;
+    private bool _vFlip;
     private IReadOnlyList<SavedNetwork> _saved = [];
     private string? _networkInfo;
 
@@ -105,10 +149,24 @@
     {
         var current = Store.Current;
         (_interval, _width, _height, _quality) = (current.IntervalSeconds, current.Width, current.Height, current.Quality);
+        (_brightness, _contrast, _saturation, _sharpness, _ev, _awb, _hFlip, _vFlip) =
+            (current.Brightness, current.Contrast, current.Saturation, current.Sharpness, current.Ev, current.Awb, current.HFlip, current.VFlip);
 
         Network.Changed += OnNetworkChanged;
         await LoadSavedAsync();
     }
+
+    private static string AwbLabel(AwbMode mode) => mode switch
+    {
+        AwbMode.Auto => Locals.AwbAuto,
+        AwbMode.Incandescent => Locals.AwbIncandescent,
+        AwbMode.Tungsten => Locals.AwbTungsten,
+        AwbMode.Fluorescent => Locals.AwbFluorescent,
+        AwbMode.Indoor => Locals.AwbIndoor,
+        AwbMode.Daylight => Locals.AwbDaylight,
+        AwbMode.Cloudy => Locals.AwbCloudy,
+        _ => mode.ToString(),
+    };
 
     public void Dispose() => Network.Changed -= OnNetworkChanged;
 
@@ -137,10 +195,14 @@
 
     private async Task SaveAsync()
     {
-        await Store.UpdateAsync(new CameraSettings(_interval, _width, _height, _quality));
+        await Store.UpdateAsync(new CameraSettings(
+            _interval, _width, _height, _quality,
+            _brightness, _contrast, _saturation, _sharpness, _ev, _awb, _hFlip, _vFlip));
         // Show what was actually stored, the store clamps values to what the camera accepts.
         var saved = Store.Current;
         (_interval, _width, _height, _quality) = (saved.IntervalSeconds, saved.Width, saved.Height, saved.Quality);
+        (_brightness, _contrast, _saturation, _sharpness, _ev, _awb, _hFlip, _vFlip) =
+            (saved.Brightness, saved.Contrast, saved.Saturation, saved.Sharpness, saved.Ev, saved.Awb, saved.HFlip, saved.VFlip);
         Snackbar.Add(Locals.SettingsSaved, Severity.Success);
     }
 

@@ -18,6 +18,10 @@ public sealed class RpiCamOptions
 
     public string CameraCommand { get; set; } = "rpicam-still";
 
+    public string VideoCommand { get; set; } = "rpicam-vid";
+
+    public string FfmpegCommand { get; set; } = "ffmpeg";
+
     /// <summary>Capturing pauses when less free space than this is left on the data volume.</summary>
     public int MinFreeMegabytes { get; set; } = 200;
 
