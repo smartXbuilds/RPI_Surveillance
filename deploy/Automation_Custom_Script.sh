@@ -190,6 +190,13 @@ grep -qxF "camera_auto_detect=1" "$CONFIG_TXT" || echo "camera_auto_detect=1" >>
 # (anders als Raspberry Pi OS): ohne bcm2835-isp bleibt rpicam-apps bei "no cameras available",
 # ohne bcm2835-codec meldet rpicam-vid "failed to open V4L2 H264 encoder" (fuer Livestream/Clips).
 printf 'bcm2835-isp\nbcm2835-codec\n' > /etc/modules-load.d/rpicam-isp.conf
+# DietPi blacklistet genau diese Module (und vc_sm_cma, das sie brauchen) in /etc/modprobe.d/, und
+# systemd-modules-load ueberspringt blacklistete Module: nach einem Neustart fehlt das ISP, und
+# rpicam-apps meldet irrefuehrend "only supports the Raspberry Pi platforms".
+sed -i -E 's/^(blacklist (bcm2835_isp|bcm2835_codec|vc_sm_cma))$/# rpicam: \1 (von der Kamera benoetigt)/' \
+    /etc/modprobe.d/dietpi-disable_rpi_camera.conf \
+    /etc/modprobe.d/dietpi-disable_rpi_codec.conf \
+    /etc/modprobe.d/dietpi-disable_vcsm.conf 2> /dev/null || true
 
 # ---------------------------------------------------------------------------------------------
 step "Kamera pruefen (nur zur Info, Overlay-Aenderungen wirken erst nach dem Neustart unten)"
