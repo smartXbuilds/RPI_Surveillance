@@ -94,10 +94,11 @@ public static class Endpoints
         app.MapGet("/api/images/zip", (
             [FromQuery(Name = "name")] string[] names,
             ImageStore store,
+            ClipStore clips,
             IOptions<RpiCamOptions> options) =>
         {
             var existing = names.Distinct().Take(MaxZipImages)
-                .Select(n => (Name: n, Path: store.ResolveImagePath(n)))
+                .Select(n => (Name: n, Path: ClipStore.IsValidName(n) ? clips.ResolvePath(n) : store.ResolveImagePath(n)))
                 .Where(x => x.Path is not null)
                 .ToList();
             if (existing.Count == 0)
@@ -115,7 +116,7 @@ public static class Endpoints
             {
                 foreach (var (name, path) in existing)
                 {
-                    // JPEGs are already compressed, deflating them again only costs CPU.
+                    // JPEGs and MP4s are already compressed, deflating them again only costs CPU.
                     zip.CreateEntryFromFile(path!, name, CompressionLevel.NoCompression);
                 }
             }

@@ -173,19 +173,19 @@
     <value>{0} ausgewählt</value>
   </data>
   <data name="GalleryImageCount" xml:space="preserve">
-    <value>{0} Bilder</value>
+    <value>{0} Einträge</value>
   </data>
   <data name="GalleryEmpty" xml:space="preserve">
-    <value>Noch keine Bilder. Drücke „Jetzt aufnehmen“.</value>
+    <value>Noch nichts vorhanden. Drücke „Jetzt aufnehmen“.</value>
   </data>
   <data name="GalleryDeleteTitle" xml:space="preserve">
-    <value>Bilder löschen</value>
+    <value>Einträge löschen</value>
   </data>
   <data name="GalleryDeleteConfirm" xml:space="preserve">
-    <value>{0} Bild(er) endgültig löschen?</value>
+    <value>{0} Eintrag/Einträge endgültig löschen?</value>
   </data>
   <data name="GalleryDeleted" xml:space="preserve">
-    <value>{0} Bild(er) gelöscht.</value>
+    <value>{0} Eintrag/Einträge gelöscht.</value>
   </data>
   <data name="GalleryCaptured" xml:space="preserve">
     <value>Bild aufgenommen.</value>

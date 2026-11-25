@@ -16,6 +16,12 @@ html, body, .mud-typography, .mud-button-root, .mud-input-root, .mud-chip {
     background: rgba(128, 128, 128, 0.2);
 }
 
+.gallery-clip {
+    display: grid;
+    place-items: center;
+    color: inherit;
+}
+
 .login-shell {
     min-height: 100vh;
     display: grid;
