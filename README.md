@@ -1,169 +1,400 @@
 # RpiCam
 
-> **English:** A self-contained camera web app for a Raspberry Pi 3 A+ running DietPi: photo gallery, live view, motion
-> detection with pictures or video clips, and a Wi-Fi hotspot with switching to a normal Wi-Fi. Works with the Raspberry Pi
-> camera, USB webcams and RTSP network cameras. Blazor Server (.NET 10),
-> MudBlazor 9. The documentation below is in German; issues in English or German are welcome.
+> **English:** A small, self-contained camera web app for the Raspberry Pi: photo gallery, live view, motion detection with
+> pictures or video clips, and its own Wi-Fi hotspot. Works with the Raspberry Pi camera, USB webcams and RTSP network
+> cameras, and also runs on a regular Linux PC. Blazor Server (.NET 10), MudBlazor 9. The documentation below is in German;
+> issues in English or German are welcome.
 
-Kamera-Weboberfläche für einen Raspberry Pi 3 A+ (DietPi). Blazor Server, .NET 10, MudBlazor 9. Als Kamera dient die
-Raspberry-Pi-Kamera, eine USB-Webcam oder eine Netzwerkkamera (RTSP), siehe "Kameras" unten.
+**RpiCam macht aus einem Raspberry Pi und einer Kamera eine kleine Überwachungskamera mit Weboberfläche.** Du öffnest sie im
+Browser, auf dem Handy oder am PC, ohne App, ohne Cloud und ohne Konto bei irgendeinem Anbieter. Alle Bilder bleiben auf
+dem Gerät.
 
-- **Galerie:** Aufnahmen und Bewegungs-Videoclips ansehen, einzeln oder gesammelt löschen, einzeln oder als ZIP herunterladen, manuell oder im
-  Intervall aufnehmen.
-- **Live-Ansicht:** Fragmentiertes MP4 direkt aus der Kamera (H.264-Hardware-Encoder → `ffmpeg -c copy`, kein Neucodieren), im Browser abspielbar über
-  `<video>`. Wird **nicht** aufgezeichnet und nicht auf die SD-Karte geschrieben, siehe "Live-Ansicht" unten.
-- **Bewegungserkennung:** Läuft im Hintergrund (Bilddifferenz alle ~2s über ein kleines Graustufenbild, siehe "Bewegungserkennung" unten). Bei Bewegung
-  wahlweise Bilder im Intervall oder einen Videoclip fester Länge. Beides landet in der Galerie, Clips zusätzlich im Ereignisprotokoll
-  auf `/motion` (mit Download/Löschen).
-- **WLAN:** Der Pi ist standardmäßig ein **Hotspot**. Die App scannt nach Netzwerken, verbindet nach Passworteingabe und wechselt dabei vom Hotspot in den Client-Modus.
-  Schlägt das fehl, startet der Hotspot automatisch wieder.
-- **Einstellungen:** Kameratyp, Aufnahme (Intervall, Auflösung, Qualität), Bildregler (Helligkeit, Kontrast, Sättigung, Schärfe, Belichtungskorrektur, Weißabgleich,
-  spiegeln), gespeicherte Netzwerke **entfernen** (das aktive Netzwerk entfernen = zurück zum Hotspot), Systemzeit vom Browser übernehmen (ohne Internet
-  hat der Pi keine Uhr), Sprache (Deutsch/Englisch).
-- Alles hinter einem Login (ein Konto, Cookie). Das Konto legt man beim **ersten Aufruf** im Browser selbst an, siehe "Erster Start" unten.
+## Was RpiCam kann
 
-## Entwickeln
+- 📷 **Galerie:** Fotos auf Knopfdruck oder automatisch alle paar Sekunden. Ansehen, löschen, einzeln oder als ZIP herunterladen.
+- 🎥 **Live-Ansicht:** Das Kamerabild direkt im Browser. Es wird nicht aufgezeichnet.
+- 🏃 **Bewegungserkennung:** Bewegt sich etwas, macht RpiCam Fotos oder nimmt einen kurzen Videoclip auf.
+- 📶 **Eigener Hotspot:** Der Pi spannt sein eigenes WLAN auf, das klappt auch mitten im Garten ohne Router. Auf Wunsch
+  verbindet er sich mit deinem WLAN zu Hause und fällt automatisch auf den Hotspot zurück, wenn das nicht klappt.
+- 🔌 **Drei Kameratypen:** Raspberry-Pi-Kamera, USB-Webcam oder Netzwerkkamera (RTSP).
+- 🔒 **Login:** Beim ersten Aufruf legst du dein eigenes Konto an.
+- 🌍 Deutsch und Englisch, helles und dunkles Design.
 
-```bash
-dotnet run          # http://localhost:5018, beim ersten Aufruf Konto anlegen (landet in data/account.json)
+## Was du brauchst
+
+| | Mindestens | Getestet mit |
+|---|---|---|
+| Rechner | Raspberry Pi mit WLAN und Hardware-Videoencoder (Zero 2 W, 3, 4) | Raspberry Pi 3 A+ (512 MB) |
+| Kamera | Raspberry-Pi-Kamera, USB-Webcam oder RTSP-Netzwerkkamera | AZ-Delivery Kamera V1.3 (OV5647), Microsoft LifeCam HD-3000 |
+| Speicherkarte | 8 GB | 32 GB |
+| Zum Einrichten | einen PC mit Linux, Windows oder macOS und Kartenleser | Linux Mint |
+
+Der Raspberry Pi 5 ist nicht getestet. Ihm fehlt der Hardware-Videoencoder, den die Live-Ansicht mit der Pi-Kamera nutzt.
+Andere Linux-Kleinrechner (z.B. NanoPi) funktionieren mit USB-Webcam oder Netzwerkkamera, siehe
+[Weg B](#weg-b-raspberry-pi-os-oder-anderes-linux).
+
+---
+
+## Installation
+
+Es gibt drei Wege. Such dir einen aus:
+
+| Weg | Für wen | Aufwand |
+|---|---|---|
+| [**A: DietPi**](#weg-a-dietpi-auf-dem-raspberry-pi-empfohlen) | Neuer Pi nur für die Kamera, mit eigenem Hotspot | Karte vorbereiten, einstecken, 20 Minuten warten |
+| [**B: Raspberry Pi OS**](#weg-b-raspberry-pi-os-oder-anderes-linux) | Pi läuft schon oder soll noch anderes tun | ein paar Befehle per SSH |
+| [**C: PC**](#weg-c-auf-dem-pc-linux) | Ausprobieren, oder Webcam/Netzwerkkamera am PC | wenige Minuten |
+
+Für Weg A und B baust du die App vorher einmal auf deinem PC.
+
+### Vorbereitung: die App bauen
+
+Das geht auf Linux, Windows und macOS gleich.
+
+1. Installiere das **.NET 10 SDK**: <https://dotnet.microsoft.com/download/dotnet/10.0>
+2. Hol dir den Quellcode und baue die App:
+   ```bash
+   git clone https://github.com/smartXbuilds/RPI_Surveillance.git
+   cd RPI_Surveillance
+   dotnet publish RpiCam.csproj -c Release -p:UseAppHost=false -p:DebugType=none -p:DebugSymbols=false -o publish
+   ```
+3. Im Ordner `publish` liegt jetzt die fertige App (etwa 13 MB). Sie läuft auf jedem Pi, egal ob 32 oder 64 Bit.
+
+### Weg A: DietPi auf dem Raspberry Pi (empfohlen)
+
+[DietPi](https://dietpi.com) ist ein schlankes Linux für den Pi. Beim allerersten Start richtet ein Skript aus diesem
+Repository alles selbst ein: Kamera, Hotspot, die App als Dienst. Du musst dich nie per SSH anmelden.
+
+**1. DietPi auf die Karte schreiben**
+
+Lade das DietPi-Image für den Raspberry Pi herunter (<https://dietpi.com/#download>, Variante „ARMv8“) und schreib es mit
+dem [Raspberry Pi Imager](https://www.raspberrypi.com/software/) („Eigenes Image verwenden“) oder
+[balenaEtcher](https://etcher.balena.io/) auf die Speicherkarte. Zieh die Karte danach kurz ab und steck sie wieder ein.
+Dann erscheint ein Laufwerk namens `boot`.
+
+**2. Auf dem `boot`-Laufwerk vier Dateien anpassen**
+
+- **`dietpi.txt`**: Such die folgenden Zeilen und setz sie so:
+  ```ini
+  AUTO_SETUP_AUTOMATED=1
+  AUTO_SETUP_NET_WIFI_ENABLED=1
+  AUTO_SETUP_NET_WIFI_COUNTRY_CODE=DE
+  AUTO_SETUP_NET_HOSTNAME=rpicam
+  AUTO_SETUP_GLOBAL_PASSWORD=ein-sicheres-passwort
+  ```
+  Das Passwort gilt für die Anmeldung am Pi per SSH (Benutzer `root` oder `dietpi`), nicht für die Kamera-App.
+
+- **`dietpi-wifi.txt`**: Dein WLAN zu Hause. Der Pi braucht es nur beim ersten Start, um Software herunterzuladen:
+  ```ini
+  aWIFI_SSID[0]='Mein-WLAN'
+  aWIFI_KEY[0]='mein-wlan-passwort'
+  ```
+
+- **`cmdline.txt`**: Häng ans Ende der einzigen Zeile ein Leerzeichen und `cfg80211.ieee80211_regdom=DE` an. Es muss alles
+  in **einer** Zeile bleiben.
+
+- **`rpicam.env`** (neue Datei): Name und Passwort für den Hotspot der Kamera:
+  ```ini
+  HOTSPOT_SSID=RpiCam
+  HOTSPOT_PSK=mindestens-8-zeichen
+  ```
+  Ohne Anführungszeichen und ohne Backslashes. Hast du eine andere Pi-Kamera als die OV5647, ergänzt du z.B.
+  `CAMERA_OVERLAY=imx708` (Kamera-Modul 3) oder `CAMERA_OVERLAY=imx219` (Kamera-Modul 2).
+
+**3. App und Einrichtungsskript auf die Karte kopieren**
+
+- den Ordner `publish` aus der Vorbereitung, umbenannt in **`rpicam-app`**
+- die Datei **`deploy/Automation_Custom_Script.sh`** aus dem Repository
+
+Danach sieht das `boot`-Laufwerk ungefähr so aus:
+```
+boot/
+├── Automation_Custom_Script.sh
+├── cmdline.txt
+├── dietpi.txt
+├── dietpi-wifi.txt
+├── rpicam.env
+├── rpicam-app/
+│   ├── RpiCam.dll
+│   └── ...
+└── ... (weitere DietPi-Dateien)
 ```
 
-Im Development-Modus läuft die App im **Simulationsmodus** (`RpiCam:Simulate=true`): falsche Kamera (Farbverläufe) und ein
-simuliertes Netzwerk. Es wird nie `nmcli` aufgerufen, das WLAN des Entwicklungsrechners bleibt also unberührt.
-Ein Passwort, das mit `wrong` beginnt, lässt die simulierte Verbindung fehlschlagen.
-Im Simulationsmodus ersetzt `ffmpeg`s eigener Testbild-Generator (`testsrc`/`testsrc2`) die Kamera, für Fotos, Live-Ansicht und
-Bewegungsclips; Vorschaubilder erzeugt ebenfalls `ffmpeg`. Dafür muss `ffmpeg` lokal installiert sein (`sudo apt install ffmpeg`), sonst
-kommt eine klare Fehlermeldung statt eines stillen Fehlschlags. Die simulierte Bewegungserkennung "sieht" alle 20 Sekunden kurz einen
-hellen Block, damit sich das Auslösen auch ohne Kamera beobachten lässt.
+**4. Pi starten und warten**
 
-## Auf den Pi bringen
+Karte in den Pi, Kamera anschließen, Strom an. Der erste Start dauert **10 bis 20 Minuten**: DietPi aktualisiert sich,
+danach installiert das Skript Kamera-Software, ffmpeg, .NET und die App. Zum Schluss löscht es die Zugangsdaten von der
+Karte und startet neu.
 
-1. DietPi-Image auf die SD-Karte schreiben (Raspberry-Pi-Variante, ARMv8).
-2. Auf der Boot-Partition (FAT) eintragen:
-   - `dietpi-wifi.txt`: Heim-WLAN (`aWIFI_SSID[0]`, `aWIFI_KEY[0]`). Nur für die Installation beim ersten Start nötig.
-   - `dietpi.txt`: `AUTO_SETUP_AUTOMATED=1`, `AUTO_SETUP_NET_WIFI_ENABLED=1`, `AUTO_SETUP_NET_WIFI_COUNTRY_CODE=DE`, Passwort, Hostname (`rpicam`).
-   - `rpicam.env`: `HOTSPOT_SSID`, `HOTSPOT_PSK` (8-63 Zeichen). Optional `CAMERA_OVERLAY`
-     (Standard `ov5647` - die AZ-Delivery-V1.3-Kamera, für die dieses Projekt gebaut ist; bei einer anderen Kamera z.B. `imx708`
-     eintragen). Keine Anführungszeichen und keine Backslashes.
-   - `config.txt`: nichts Kameraspezifisches nötig, das Setup-Skript trägt `dtoverlay=vc4-kms-v3d,cma-128` und den
-     Sensor-Overlay aus `CAMERA_OVERLAY` selbst ein (siehe unten, "Bekannte Grenzen").
-   - `cmdline.txt`: am Ende der einen Zeile ` cfg80211.ieee80211_regdom=DE`.
-3. `deploy/Automation_Custom_Script.sh` auf die Boot-Partition kopieren und die App dorthin veröffentlichen:
-   ```bash
-   dotnet publish RpiCam.csproj -c Release -p:UseAppHost=false -p:DebugType=none -p:DebugSymbols=false -o publish
-   cp -r publish /media/$USER/<boot-partition>/rpicam-app
-   ```
-   Architekturneutral, nicht mit `-r linux-arm64`: Das Paket ist reine verwaltete Bibliotheken und läuft so auch auf dem Entwicklungsrechner (Rauchtest).
-4. SD-Karte in den Pi, Strom an. Beim ersten Start (ca. 10-20 Minuten, braucht das Heim-WLAN als Internet) installiert das Skript
-   NetworkManager, `rpicam-apps-lite`, `ffmpeg`, die .NET-10-Laufzeit, die App als systemd-Dienst `rpicam`, das Hotspot-Profil und die
-   Kamera-Konfiguration in `config.txt` (siehe "Raspberry-Pi-Kamera" unten). Danach löscht es die Zugangsdaten (`rpicam.env`,
-   WLAN-Schlüssel) und startet neu.
-5. Verbinde dich mit dem Hotspot und öffne **http://192.168.4.1**. Beim ersten Aufruf legst du dort das Konto an.
+**5. Mit dem Hotspot verbinden**
 
-Das Protokoll der Einrichtung steht in `/boot/firmware/rpicam-setup.log` (auf der SD-Karte, am PC lesbar).
-Nach einem Fehler lässt sich das Skript per SSH wiederholen: `bash /boot/Automation_Custom_Script.sh`.
+Verbinde dein Handy oder deinen Laptop mit dem WLAN aus `rpicam.env` (im Beispiel `RpiCam`) und öffne
+**<http://192.168.4.1>**. Jetzt legst du dein Konto an, siehe [Erster Start](#erster-start).
+
+> Klappt etwas nicht? Steck die Karte in den PC: Auf dem `boot`-Laufwerk liegt `rpicam-setup.log` mit dem Protokoll der
+> Einrichtung.
+
+### Weg B: Raspberry Pi OS oder anderes Linux
+
+Für einen Pi mit Raspberry Pi OS oder jedes andere Debian-artige Linux. Du richtest die App per SSH als Dienst ein, das
+Netzwerk des Geräts bleibt dabei unverändert. Diese Anleitung ist so auf Debian 13 (NanoPi NEO mit USB-Webcam) getestet.
+Auf Raspberry Pi OS ist sie nicht getestet.
+
+**1. System vorbereiten**
+
+Schreib Raspberry Pi OS Lite mit dem [Raspberry Pi Imager](https://www.raspberrypi.com/software/) auf die Karte. In den
+Einstellungen des Imagers vergibst du den Hostnamen `rpicam`, Benutzer und Passwort, dein WLAN und schaltest SSH ein. Pi
+starten, dann vom PC aus anmelden:
+```bash
+ssh benutzer@rpicam.local
+```
+
+**2. Kamera-Software und ffmpeg installieren**
+```bash
+sudo apt update
+sudo apt install -y ffmpeg rpicam-apps-lite   # rpicam-apps-lite nur auf dem Raspberry Pi
+rpicam-hello --list-cameras                    # zeigt die Pi-Kamera, falls angeschlossen
+```
+Wird eine OV5647-Kamera (z.B. AZ-Delivery V1.3) nicht erkannt, trag in `/boot/firmware/config.txt` die Zeile
+`dtoverlay=ov5647` ein und starte neu.
+
+**3. .NET-Laufzeit installieren**
+```bash
+curl -fsSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh
+sudo bash dotnet-install.sh --channel 10.0 --runtime aspnetcore --install-dir /usr/share/dotnet
+sudo ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet
+rm dotnet-install.sh
+```
+
+**4. App kopieren.** Auf dem PC im Repository-Ordner:
+```bash
+scp -r publish benutzer@rpicam.local:~/rpicam-app
+```
+Dann wieder auf dem Pi:
+```bash
+sudo install -d /opt/rpicam && sudo cp -r ~/rpicam-app/. /opt/rpicam/ && rm -r ~/rpicam-app
+```
+
+**5. Konfiguration anlegen**
+```bash
+sudo install -d -m 700 /etc/rpicam /var/lib/rpicam
+sudo tee /etc/rpicam/rpicam.env > /dev/null <<'EOF'
+ASPNETCORE_URLS=http://0.0.0.0:80
+ASPNETCORE_ENVIRONMENT=Production
+DOTNET_gcConcurrent=0
+RpiCam__DataDir=/var/lib/rpicam
+# Ohne Hardware-Videoencoder (kein Raspberry Pi) für USB-Webcams:
+#RpiCam__H264Encoder=libx264
+# Optional eigener Hotspot (braucht NetworkManager):
+#RpiCam__HotspotSsid=RpiCam
+#RpiCam__HotspotPassword=mindestens-8-zeichen
+EOF
+sudo chmod 600 /etc/rpicam/rpicam.env
+```
+Läuft auf Port 80 schon etwas anderes, nimm einen anderen Port, z.B. `http://0.0.0.0:8080`.
+
+**6. Als Dienst einrichten und starten**
+```bash
+sudo tee /etc/systemd/system/rpicam.service > /dev/null <<'EOF'
+[Unit]
+Description=RpiCam camera web app
+After=network-online.target
+
+[Service]
+WorkingDirectory=/opt/rpicam
+EnvironmentFile=/etc/rpicam/rpicam.env
+ExecStart=/usr/local/bin/dotnet /opt/rpicam/RpiCam.dll
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now rpicam
+```
+Der Dienst läuft als root, weil die App das WLAN (`nmcli`) und die Uhrzeit stellen darf.
+
+**7. Fertig!** Öffne **<http://rpicam.local>** (bzw. mit `:8080` am Ende) und leg dein Konto an.
+
+> **Hotspot unter Raspberry Pi OS:** Hast du den Hotspot in Schritt 5 eingeschaltet, soll das WLAN zu Hause trotzdem Vorrang
+> haben. Dafür bekommt die vom Imager angelegte Verbindung eine höhere Priorität:
+> `sudo nmcli connection modify preconfigured connection.autoconnect-priority 10`
+
+### Weg C: Auf dem PC (Linux)
+
+**Nur mal ausprobieren, ohne Kamera.** Mit dem .NET 10 SDK und ffmpeg (`sudo apt install ffmpeg`) im Repository-Ordner:
+```bash
+dotnet run
+```
+Dann <http://localhost:5018> öffnen. Die App läuft im **Simulationsmodus**: Statt der Pi-Kamera kommt ein Testbild, und
+WLAN und Systemzeit werden nur simuliert. Dein PC bleibt also unverändert.
+
+**Dauerhaft mit Webcam oder Netzwerkkamera.** Bau die App wie in der [Vorbereitung](#vorbereitung-die-app-bauen) und starte sie so:
+```bash
+RpiCam__Simulate=true \
+RpiCam__H264Encoder=libx264 \
+RpiCam__DataDir=$HOME/.local/share/rpicam \
+ASPNETCORE_URLS=http://0.0.0.0:8080 \
+dotnet publish/RpiCam.dll
+```
+- `Simulate=true` klingt seltsam, ist hier aber richtig: Er ersetzt nur die Pi-Kamera und die WLAN-Steuerung. USB-Webcam
+  und Netzwerkkamera sind echt, und die App fasst das WLAN deines PCs nicht an.
+- `libx264` rechnet das Webcam-Video per Software um, ein PC schafft das locker.
+- Für die Webcam muss dein Benutzer in der Gruppe `video` sein: `groups` zeigt es, `sudo usermod -aG video $USER` fügt dich
+  hinzu (danach neu anmelden).
+
+Öffne <http://localhost:8080>, leg dein Konto an und wähl unter **Einstellungen → Kamera** deine Webcam oder trag die
+RTSP-Adresse deiner Netzwerkkamera ein.
+
+Windows und macOS werden nicht unterstützt: USB-Webcams spricht die App über Linux' V4L2 an.
+
+---
 
 ## Erster Start
 
-Solange kein Konto existiert, leitet die App jeden Aufruf auf **/setup** um: Benutzername und Passwort (mindestens 8 Zeichen)
-eingeben, danach ist man angemeldet und die Einrichtungsseite ist dauerhaft gesperrt. Das Passwort wird nur als gesalzener
-PBKDF2-Hash in `/var/lib/rpicam/account.json` (nur root lesbar) gespeichert.
+Beim allerersten Aufruf zeigt RpiCam **„Konto anlegen“**. Du wählst Benutzername und Passwort (mindestens 8 Zeichen) und
+bist danach angemeldet. Die Seite ist ab dann gesperrt, ein zweites Konto lässt sich nicht anlegen.
 
-Wer zuerst auf die Seite kommt, legt das Konto an - deshalb das Konto direkt nach der Installation anlegen. Erreichbar ist
-die Seite nur über den WPA2-geschützten Hotspot (oder das WLAN, in das der Pi schon eingebunden ist).
+Wer zuerst auf die Seite kommt, legt das Konto an. Mach das also gleich nach der Installation. Beim Hotspot ist das
+unkritisch: Hinein kommt nur, wer das WLAN-Passwort kennt.
 
-**Passwort vergessen:** per SSH `rm /var/lib/rpicam/account.json && systemctl restart rpicam`, danach wieder /setup aufrufen.
-Ältere Installationen mit `Auth__User`/`Auth__Password` in `/etc/rpicam/rpicam.env` übernehmen diesen Login beim ersten
-Start automatisch in `account.json`; danach können die beiden Zeilen gelöscht werden.
+**Passwort vergessen?** Per SSH auf dem Gerät:
+```bash
+sudo rm /var/lib/rpicam/account.json && sudo systemctl restart rpicam
+```
+Danach kannst du wieder ein neues Konto anlegen. Fotos und Einstellungen bleiben erhalten.
 
-## Auf dem Pi
+## So bedienst du RpiCam
 
-| | |
+| Seite | Wofür |
 |---|---|
-| Dienst | `systemctl status rpicam`, Logs: `journalctl -u rpicam` |
-| Konfiguration | `/etc/rpicam/rpicam.env` (nur root), Änderungen mit `systemctl restart rpicam` übernehmen |
-| Daten | `/var/lib/rpicam` (`account.json`, `images/`, `thumbs/`, `motion/` [Clips], `settings.json`, `motion.json`, `motion-events.json`, `keys/`) |
-| Kamera prüfen | `rpicam-hello --list-cameras`, bei "No cameras available": `i2cdetect -y 10` (Bus leer = Kabel/Hardware, Adresse ohne Antwort = Treiber/Overlay) |
-| Video/Encoder prüfen | `rpicam-vid -t 3000 --codec h264 -o - \| ffmpeg -f h264 -i pipe:0 -c copy -f mp4 -movflags frag_keyframe+empty_moov -y /tmp/t.mp4` - bei "failed to open V4L2 H264 encoder": `bcm2835-codec` fehlt (siehe deploy/) |
-| Netzwerk | `nmcli device`, `nmcli connection show` (Hotspot-Profil: `rpicam-hotspot`) |
+| **Galerie** | Fotos und Clips ansehen, „Jetzt aufnehmen“, auswählen, löschen, als ZIP laden |
+| **WLAN** | Netzwerke in der Nähe anzeigen und verbinden. Der Pi verlässt dabei den Hotspot, schlägt die Verbindung fehl, kommt der Hotspot automatisch zurück |
+| **Live-Ansicht** | Kamerabild in Echtzeit, immer nur für einen Betrachter gleichzeitig |
+| **Bewegungserkennung** | einschalten, Empfindlichkeit wählen, Fotos oder Clip als Reaktion, Protokoll der letzten Ereignisse |
+| **Einstellungen** | Kameratyp, Auflösung und Qualität, automatische Aufnahme, Bildregler, gespeicherte WLANs, Uhrzeit, Sprache |
+
+**Tipp zur Uhrzeit:** Ohne Internet weiß der Pi nicht, wie spät es ist. Unter **Einstellungen → Systemzeit** übernimmst du
+mit einem Klick die Uhrzeit deines Handys, damit die Fotos den richtigen Zeitstempel bekommen.
 
 ## Kameras
 
-Der Kameratyp wird unter **Einstellungen → Kamera** gewählt. Fotos, Live-Ansicht, Bewegungserkennung und Clips funktionieren
+Unter **Einstellungen → Kamera** wählst du den Kameratyp. Fotos, Live-Ansicht, Bewegungserkennung und Clips funktionieren
 mit allen drei:
 
 | | Raspberry-Pi-Kamera | USB-Webcam | Netzwerkkamera (RTSP) |
 |---|---|---|---|
-| Angesprochen über | `rpicam-still` / `rpicam-vid` | `ffmpeg -f v4l2` | `ffmpeg`, erst TCP, sonst UDP |
-| Auswahl | - | Gerät aus der Liste (`/dev/video*`, die Pi-eigenen Codec-/ISP-Knoten sind ausgeblendet) | Adresse `rtsp://…`/`rtsps://…`, optional Benutzer und Passwort |
-| Video | Hardware-H.264, nur umverpackt | muss nach H.264 umgerechnet werden: Hardware-Encoder `h264_v4l2m2m` (Option `RpiCam:H264Encoder`) | meist schon H.264, nur umverpackt (`-c copy`) |
-| Bildregler | ja | nein | nein (in der Kamera selbst einstellen) |
+| Auswahl | - | Gerät aus der Liste | Adresse `rtsp://…`, optional Benutzer und Passwort |
+| Video | Hardware-Encoder des Pi, kaum Last | wird nach H.264 umgerechnet (Hardware-Encoder oder `libx264`) | meist schon H.264, nur umverpackt, kaum Last |
+| Bildregler (Helligkeit, Weißabgleich …) | ja | nein | nein, in der Kamera selbst einstellen |
 | Auflösung | aus den Einstellungen | aus den Einstellungen, der Treiber nimmt die nächstpassende | bestimmt die Kamera |
 
-Hinweise:
-- **RTSP:** Die Kamera auf **H.264** stellen - H.265-Streams kann der Browser nicht abspielen. Das RTSP-Passwort liegt in
-  `/var/lib/rpicam/settings.json` (nur root lesbar) und wird nie an den Browser zurückgeschickt. Ist die Kamera nicht
-  erreichbar, bricht jeder Zugriff nach 10 Sekunden ab; die Bewegungserkennung wartet nach einem Fehler 30 Sekunden.
-- **USB:** Auf dem Pi 3 A+ ist die Umrechnung für Live-Ansicht und Clips das Engste: sie läuft auf dem Hardware-Encoder
-  (`bcm2835-codec`, richtet das Setup-Skript ein), Webcams mit MJPEG-Ausgabe müssen aber trotzdem dekodiert werden. Bei
-  Rucklern die Live-Ansicht klein halten. Auf einem Entwicklungsrechner ohne Hardware-Encoder `RpiCam:H264Encoder=libx264`
-  setzen (steht in `appsettings.Development.json`).
-- Im **Simulationsmodus** wird nur die Raspberry-Pi-Kamera simuliert - eine USB-Webcam oder Netzwerkkamera lässt sich also
-  auch am Entwicklungsrechner echt ausprobieren.
+- **Netzwerkkamera:** Stell die Kamera auf **H.264**. H.265 kann der Browser nicht abspielen. Die RTSP-Adresse steht im
+  Handbuch oder in der Weboberfläche der Kamera. Das Passwort speichert RpiCam nur auf dem Gerät und zeigt es nie wieder an.
+- **USB-Webcam:** Auf schwachen Geräten wie dem Pi 3 A+ ist die Live-Ansicht mit Webcam die anstrengendste Aufgabe.
+- **Raspberry-Pi-Kamera:** Getestet mit der AZ-Delivery V1.3 (OV5647-Nachbau). Andere Kameras stellst du unter Weg A über
+  `CAMERA_OVERLAY` in `rpicam.env` ein, siehe [Kamera-Details](#raspberry-pi-kamera-unter-dietpi).
 
-### Raspberry-Pi-Kamera
+## Update auf eine neue Version
 
-Getestet mit der **AZ-Delivery Raspberry Pi Kamera V1.3** (OmniVision OV5647, 5 MP, kein EEPROM). `camera_auto_detect` allein
-funktioniert damit nicht zuverlässig (erkennt teils fälschlich `imx708`); das Setup-Skript trägt daher explizit
-`dtoverlay=$CAMERA_OVERLAY` (Standard `ov5647`) und `dtoverlay=vc4-kms-v3d,cma-128` in `config.txt` ein. Außerdem lädt es
-das ISP-Modul (`bcm2835-isp`) und den Hardware-H.264-Encoder (`bcm2835-codec`) über `/etc/modules-load.d/` und hebt DietPis
-Blacklist für diese Module (und `vc_sm_cma`) in `/etc/modprobe.d/` auf. DietPi lädt sie anders als Raspberry Pi OS nicht
-automatisch - ohne das meldet `rpicam-hello` "no cameras available" bzw. "platform not supported", obwohl der Sensor am
-I2C-Bus antwortet, und `rpicam-vid` "failed to open V4L2 H264 encoder". Eine andere Kamera anschließen: `CAMERA_OVERLAY` in `rpicam.env` auf den passenden Sensor-Overlay-Namen setzen.
+Bau die neue Version auf dem PC (`git pull`, dann den `dotnet publish`-Befehl aus der
+[Vorbereitung](#vorbereitung-die-app-bauen)) und kopier sie auf das Gerät:
+```bash
+scp -r publish root@rpicam.local:/tmp/rpicam-app          # bei Weg B: benutzer@ statt root@
+ssh root@rpicam.local 'cp -r /tmp/rpicam-app/. /opt/rpicam/ && rm -r /tmp/rpicam-app && systemctl restart rpicam'
+```
+Fotos, Clips, Einstellungen und dein Konto bleiben erhalten, sie liegen getrennt in `/var/lib/rpicam`.
 
-## Live-Ansicht
+## Wenn etwas nicht klappt
 
-`rpicam-vid` (Hardware-H.264-Encoder) → Pipe → `ffmpeg -c copy -f mp4 -movflags frag_keyframe+empty_moov+default_base_moof` → Pipe → HTTP-Response
-(`/api/stream/live`, chunked). Kein Neucodieren, deshalb kaum CPU-Last für `ffmpeg` selbst; die Encoder-Arbeit macht die dedizierte Hardware. Auf dem
-echten Pi verifiziert (Bild im Browser, `ffprobe` auf dem Zwischenergebnis). ffmpeg kann MJPEG/HTTP auch **direkt selbst** ausliefern (`-listen 1`), das
-würde aber am Login der App vorbeigehen, deshalb läuft alles über den authentifizierten Endpoint der App statt über einen eigenen ffmpeg-Port.
-Nur **ein Betrachter gleichzeitig** (dieselbe Kamera-Sperre wie für Aufnahmen); ein zweiter Versuch bekommt eine "Kamera beschäftigt"-Meldung statt
-endlos zu warten. Das Entfernen des `<video>`-Elements allein reicht nicht zuverlässig, um `rpicam-vid`/`ffmpeg` zu beenden (auf dem Gerät geprüft) -
-der Stop-Button beendet die serverseitige Pipeline daher explizit (`LiveStreamSession`).
+| Problem | So findest du es heraus |
+|---|---|
+| Seite lädt nicht | `systemctl status rpicam` und `journalctl -u rpicam -n 50` zeigen, ob der Dienst läuft und was schiefging |
+| Einrichtung unter DietPi hängt | `rpicam-setup.log` auf dem `boot`-Laufwerk lesen (Karte in den PC stecken). Nach einem Fehler per SSH wiederholen: `bash /boot/Automation_Custom_Script.sh` |
+| „No cameras available“ | `rpicam-hello --list-cameras`. Bleibt die Liste leer: Flachbandkabel prüfen (Kontakte richtig herum?) und `i2cdetect -y 10` (leerer Bus = Kabel/Hardware, Adresse ohne Antwort = Treiber/Overlay) |
+| Live-Ansicht bleibt schwarz | `rpicam-vid -t 3000 --codec h264 -o /tmp/t.h264`. Bei „failed to open V4L2 H264 encoder“ fehlt das Modul `bcm2835-codec` |
+| USB-Webcam fehlt in der Liste | `ls /dev/video*`, Webcam ab- und wieder anstecken, dann auf „Neu suchen“ |
+| Netzwerkkamera geht nicht | Adresse am PC testen: `ffplay rtsp://…`. Läuft es dort, passen meist Benutzer und Passwort nicht |
+| WLAN-Probleme | `nmcli device` und `nmcli connection show` (das Hotspot-Profil heißt `rpicam-hotspot`) |
 
-## Bewegungserkennung
+Wichtige Orte auf dem Gerät:
 
-Nutzt **nicht** die eingebaute `motion_detect`-Stage von `rpicam-apps`: deren Ergebnis wird in der installierten `rpicam-apps-lite`-Version nirgends
-als Text geloggt oder im `--metadata`-Export sichtbar (nachgeprüft: nur der Stage-Name selbst steckt im Binary, kein Log-Text). Stattdessen holt die App
-selbst alle ~2 Sekunden ein kleines Bild (160×120, `rpicam-still --encoding yuv420`) und vergleicht dessen Helligkeitsebene (die ersten
-160×120 Bytes, kein Dekodieren nötig) mit der vorherigen; überschreitet der Anteil veränderter Pixel die
-Empfindlichkeitsschwelle, gilt das als Bewegung. Läuft als eigener Hintergrunddienst (`MotionDetectionService`), Status live auf der Seite
-`/motion` sichtbar. Reaktion wahlweise Intervall-Fotos (`ICameraService.CaptureAsync`, landen ganz normal in der Galerie) oder ein Videoclip
-fester Länge über dieselbe `rpicam-vid`/`ffmpeg`-Pipeline wie die Live-Ansicht, aber in eine echte MP4-Datei unter `/var/lib/rpicam/motion/`.
+| | |
+|---|---|
+| App | `/opt/rpicam` |
+| Konfiguration | `/etc/rpicam/rpicam.env`, nach Änderungen `systemctl restart rpicam` |
+| Daten | `/var/lib/rpicam`: Fotos (`images/`, `thumbs/`), Clips (`motion/`), Einstellungen (`settings.json`, `motion.json`), Konto (`account.json`) |
 
-## Bekannte Grenzen
+---
 
-- Der Funkchip kann **nicht gleichzeitig** Hotspot und Client sein. Beim Umschalten bricht die Verbindung des Browsers ab, wenn er über den Hotspot verbunden ist.
+## Für Entwickler
+
+```bash
+dotnet run          # http://localhost:5018, Simulationsmodus, Daten in ./data
+```
+
+Im Simulationsmodus (`RpiCam:Simulate=true`, gesetzt in `appsettings.Development.json`) gilt:
+- `nmcli` wird nie aufgerufen, ein WLAN-Passwort, das mit `wrong` beginnt, lässt die simulierte Verbindung fehlschlagen.
+- Die Pi-Kamera wird durch ffmpegs Testbild (`testsrc`/`testsrc2`) ersetzt, auch für Live-Ansicht und Clips.
+- Die simulierte Bewegungserkennung „sieht“ alle 20 Sekunden kurz einen hellen Block.
+- USB-Webcams und Netzwerkkameras sind echt.
+
+ffmpeg muss lokal installiert sein, sonst kommt eine klare Fehlermeldung.
+
+Aufbau in Kürze: Blazor Server mit MudBlazor, eine Seite pro Funktion unter `Components/Pages`, die Logik in `Services`.
+Kamerazugriffe laufen über `ICameraService` und `IVideoPipeline`, die je nach Kameratyp ein Backend wählen (`rpicam-*` oder
+ffmpeg). Alle Kamerazugriffe teilen sich eine Sperre (`CameraGate`), weil eine Kamera nur einen Nutzer gleichzeitig bedient.
+
+### Technische Details
+
+**Live-Ansicht:** `rpicam-vid` (Hardware-H.264) → Pipe → `ffmpeg -c copy -f mp4 -movflags frag_keyframe+empty_moov+default_base_moof`
+→ HTTP-Response (`/api/stream/live`). Es wird nicht neu kodiert. ffmpeg könnte den Stream auch selbst ausliefern (`-listen 1`), das
+würde aber am Login vorbeigehen, deshalb läuft alles über den authentifizierten Endpunkt der App. Das Entfernen des
+`<video>`-Elements beendet die Prozesse nicht zuverlässig (auf dem Gerät geprüft), deshalb stoppt der Stopp-Knopf die Pipeline
+serverseitig (`LiveStreamSession`).
+
+**Bewegungserkennung:** Die App nutzt nicht die `motion_detect`-Stage von `rpicam-apps`, deren Ergebnis ist in `rpicam-apps-lite`
+nirgends auslesbar. Stattdessen holt sie alle ~2 Sekunden ein Bild mit 160×120 Pixeln als rohes YUV420 (`rpicam-still --encoding
+yuv420`, bzw. ffmpeg `-pix_fmt yuv420p -f rawvideo`) und vergleicht die Helligkeitsebene mit der vorherigen. Ändert sich ein
+ausreichend großer Anteil der Pixel, gilt das als Bewegung. Webcams bekommen vorher eine Sekunde zum Einregeln der Belichtung,
+sonst sähe jedes neue Öffnen wie Bewegung aus. Nach einem Fehler, etwa einer nicht erreichbaren Kamera, wartet die Erkennung
+30 Sekunden.
+
+**Vorschaubilder:** Erzeugt ffmpeg (höchstens 480 px, nie vergrößert). Eine Bildbibliothek gibt es in der App nicht.
+
+### Raspberry-Pi-Kamera unter DietPi
+
+`camera_auto_detect` allein erkennt die AZ-Delivery V1.3 (OV5647 ohne EEPROM) nicht zuverlässig, teils fälschlich als
+`imx708`. Das Setup-Skript trägt deshalb `dtoverlay=$CAMERA_OVERLAY` (Standard `ov5647`) und `dtoverlay=vc4-kms-v3d,cma-128`
+in `config.txt` ein. Außerdem lädt es das ISP-Modul (`bcm2835-isp`) und den H.264-Encoder (`bcm2835-codec`) über
+`/etc/modules-load.d/` und hebt DietPis Blacklist für diese Module (und `vc_sm_cma`) in `/etc/modprobe.d/` auf. DietPi lädt sie
+anders als Raspberry Pi OS nicht von selbst. Ohne sie meldet `rpicam-hello` „no cameras available“ bzw. „platform not
+supported“, obwohl der Sensor am I2C-Bus antwortet.
+
+### Bekannte Grenzen
+
+- Der WLAN-Chip kann nicht gleichzeitig Hotspot und Client sein. Beim Umschalten bricht die Verbindung des Browsers ab, wenn
+  er über den Hotspot verbunden ist.
 - Ein WLAN-Scan im Hotspot-Betrieb kann verbundene Geräte kurz unterbrechen.
-- Unternehmens-WLANs (802.1X) werden nicht unterstützt.
-- Die Seite läuft über **HTTP** (kein Zertifikat im eigenen Hotspot). Passwörter werden unverschlüsselt im Hotspot-WLAN übertragen, das WLAN selbst ist aber WPA2-verschlüsselt.
-- Kamera, Bewegungserkennung, Live-Ansicht und Bewegungs-Videoclips teilen sich **eine** Kamera-Sperre: Nur eine Aktion läuft wirklich gleichzeitig,
-  alles andere wartet oder meldet "beschäftigt". Auf dem Pi 3 A+ (512 MB RAM) macht das Sinn, sollte aber nicht überraschen.
-- Bewegungserkennung per Bilddifferenz reagiert auf Helligkeitsänderungen im Bild, nicht auf "echte" Objekte - Lichtwechsel oder Schatten können
-  auslösen, ein sehr kleines oder sehr langsames Objekt eventuell nicht. Empfindlichkeit in `/motion` anpassen.
+- Firmen-WLANs (802.1X) werden nicht unterstützt.
+- Die Seite läuft über **HTTP**, im eigenen Hotspot gibt es kein Zertifikat. Das WLAN selbst ist WPA2-verschlüsselt.
+- Fotos, Live-Ansicht, Bewegungserkennung und Clips teilen sich eine Kamera. Läuft gerade etwas, meldet alles andere
+  „Kamera beschäftigt“.
+- Die Bewegungserkennung vergleicht Helligkeit, keine Objekte: Lichtwechsel oder Schatten können auslösen, sehr kleine
+  oder langsame Bewegungen eventuell nicht. Die Empfindlichkeit stellst du unter `/motion` ein.
 
 ## Fehler melden und Mitwirken
 
-Das GitHub-Repository ist ein **Spiegel**, entwickelt wird in einem privaten Repository. Fehler, Fragen und Ideen bitte als
-[Issue](../../issues) eintragen, gern mit Pi-Modell, Kamera-Modul, DietPi-Version und dem Auszug aus `journalctl -u rpicam`
-bzw. `rpicam-setup.log` (vorher Passwörter und SSIDs entfernen). Pull Requests werden nicht direkt gemergt, gute Vorschläge
-werden aber übernommen.
+Das GitHub-Repository ist ein **Spiegel**, entwickelt wird in einem privaten Repository. Fehler, Fragen und Ideen sind als
+[Issue](../../issues) sehr willkommen. Hilfreich sind Gerät und Kamera, das System (DietPi, Raspberry Pi OS …) und ein
+Auszug aus `journalctl -u rpicam` bzw. `rpicam-setup.log`. Bitte vorher Passwörter und WLAN-Namen entfernen. Pull Requests
+werden nicht direkt übernommen, gute Vorschläge fließen aber gern ein.
 
 ## Lizenz
 
 [Apache License 2.0](LICENSE).
 
 Verwendete Bibliotheken: [MudBlazor](https://github.com/MudBlazor/MudBlazor) (MIT),
-[Serilog](https://github.com/serilog/serilog) (Apache-2.0), .NET/ASP.NET Core (MIT). Eine Bildbibliothek gibt es nicht:
-`rpicam-apps` (BSD-2-Clause) und `ffmpeg` (LGPL/GPL, auch für die Vorschaubilder) werden nur als eigene Programme aufgerufen
-und nicht mitgeliefert.
+[Serilog](https://github.com/serilog/serilog) (Apache-2.0), .NET/ASP.NET Core (MIT). `rpicam-apps` (BSD-2-Clause) und
+`ffmpeg` (LGPL/GPL) werden nur als eigene Programme aufgerufen und nicht mitgeliefert.
