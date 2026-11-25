@@ -101,6 +101,11 @@ public static partial class CameraInput
     /// Video capture devices from /sys/class/video4linux. Only each device's first node (index 0; a
     /// webcam usually adds a metadata node as well), and without the Pi's own codec/ISP nodes.
     /// </summary>
+    // Video nodes that are hardware codecs or ISPs, not cameras. Pi: bcm2835-codec/-isp, unicam (the
+    // CSI camera itself), rpi-hevc-dec, pispbe/rp1-cfe (Pi 5). Other ARM boards: cedrus (Allwinner,
+    // e.g. NanoPi NEO), hantro and rkvdec (Rockchip/NXP).
+    private static readonly string[] NotACamera = ["bcm2835", "unicam", "rpi-", "pispbe", "rp1-", "cedrus", "hantro", "rkvdec"];
+
     public static IReadOnlyList<UsbCamera> FindUsbCameras()
     {
         const string sysDir = "/sys/class/video4linux";
@@ -122,12 +127,7 @@ public static partial class CameraInput
             {
                 continue;
             }
-            // bcm2835-codec/-isp, unicam (the CSI camera itself), rpi-hevc-dec, pispbe/rp1-cfe (Pi 5).
-            if (name.StartsWith("bcm2835", StringComparison.OrdinalIgnoreCase)
-                || name.StartsWith("unicam", StringComparison.OrdinalIgnoreCase)
-                || name.StartsWith("rpi-", StringComparison.OrdinalIgnoreCase)
-                || name.StartsWith("pispbe", StringComparison.OrdinalIgnoreCase)
-                || name.StartsWith("rp1-", StringComparison.OrdinalIgnoreCase))
+            if (NotACamera.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }
