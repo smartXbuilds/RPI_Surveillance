@@ -24,7 +24,7 @@ public interface IVideoPipeline
 /// into MP4 without re-encoding (-c copy costs almost no CPU). Verified against the real device:
 /// rpicam-vid needs the bcm2835-codec kernel module for the encoder, see deploy/.
 /// </summary>
-public sealed class RpiVideoPipeline(IOptions<RpiCamOptions> options, CameraSettingsStore settings, ILogger<RpiVideoPipeline> log) : IVideoPipeline
+public sealed class RpiVideoPipeline(IOptions<RpiCamOptions> options, CameraSettingsStore settings, ILogger<RpiVideoPipeline> log) : IPiVideoPipeline
 {
     // Fixed video resolution/framerate, independent of the still-picture settings: those can be set
     // far higher than sensible for video, and neither video feature asks the user to tune them.
@@ -72,7 +72,7 @@ public sealed class RpiVideoPipeline(IOptions<RpiCamOptions> options, CameraSett
             "--codec", "h264",
             "--inline", // repeats SPS/PPS on every I-frame, so ffmpeg can start mid-stream
         };
-        args.AddRange(RpiCameraService.ImageControlArgs(settings.Current));
+        args.AddRange(RpiCameraBackend.ImageControlArgs(settings.Current));
         args.AddRange(["-o", "-"]);
         return StartProcess(Options.VideoCommand, args, redirectIn: false);
     }

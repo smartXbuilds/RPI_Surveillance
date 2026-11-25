@@ -103,6 +103,46 @@ namespace RpiCam.Resources
 
         public static string LoginExpired => ResourceManager.GetString("LoginExpired", resourceCulture)!;
 
+        public static string SettingsCamera => ResourceManager.GetString("SettingsCamera", resourceCulture)!;
+
+        public static string SettingsCameraSource => ResourceManager.GetString("SettingsCameraSource", resourceCulture)!;
+
+        public static string CameraSourcePi => ResourceManager.GetString("CameraSourcePi", resourceCulture)!;
+
+        public static string CameraSourceUsb => ResourceManager.GetString("CameraSourceUsb", resourceCulture)!;
+
+        public static string CameraSourceRtsp => ResourceManager.GetString("CameraSourceRtsp", resourceCulture)!;
+
+        public static string SettingsUsbDevice => ResourceManager.GetString("SettingsUsbDevice", resourceCulture)!;
+
+        public static string SettingsUsbNone => ResourceManager.GetString("SettingsUsbNone", resourceCulture)!;
+
+        public static string SettingsUsbRefresh => ResourceManager.GetString("SettingsUsbRefresh", resourceCulture)!;
+
+        public static string SettingsUsbRequired => ResourceManager.GetString("SettingsUsbRequired", resourceCulture)!;
+
+        public static string SettingsRtspUrl => ResourceManager.GetString("SettingsRtspUrl", resourceCulture)!;
+
+        public static string SettingsRtspUrlHelp => ResourceManager.GetString("SettingsRtspUrlHelp", resourceCulture)!;
+
+        public static string SettingsRtspUser => ResourceManager.GetString("SettingsRtspUser", resourceCulture)!;
+
+        public static string SettingsRtspPassword => ResourceManager.GetString("SettingsRtspPassword", resourceCulture)!;
+
+        public static string SettingsRtspPasswordKeep => ResourceManager.GetString("SettingsRtspPasswordKeep", resourceCulture)!;
+
+        public static string SettingsRtspInvalid => ResourceManager.GetString("SettingsRtspInvalid", resourceCulture)!;
+
+        public static string SettingsSourcePiHint => ResourceManager.GetString("SettingsSourcePiHint", resourceCulture)!;
+
+        public static string SettingsSourceUsbHint => ResourceManager.GetString("SettingsSourceUsbHint", resourceCulture)!;
+
+        public static string SettingsSourceRtspHint => ResourceManager.GetString("SettingsSourceRtspHint", resourceCulture)!;
+
+        public static string SettingsResolutionRtsp => ResourceManager.GetString("SettingsResolutionRtsp", resourceCulture)!;
+
+        public static string SettingsImageControlsPiOnly => ResourceManager.GetString("SettingsImageControlsPiOnly", resourceCulture)!;
+
         public static string PageTitleSetup => ResourceManager.GetString("PageTitleSetup", resourceCulture)!;
 
         public static string SetupTitle => ResourceManager.GetString("SetupTitle", resourceCulture)!;

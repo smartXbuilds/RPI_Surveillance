@@ -27,7 +27,12 @@ public sealed record CameraSettings(
     double Ev = 0,
     AwbMode Awb = AwbMode.Auto,
     bool HFlip = false,
-    bool VFlip = false)
+    bool VFlip = false,
+    CameraSource Source = CameraSource.Pi,
+    string UsbDevice = "",
+    string RtspUrl = "",
+    string RtspUser = "",
+    string RtspPassword = "")
 {
     public const int MinSide = 320;
     public const int MaxSide = 4608;
@@ -45,10 +50,19 @@ public sealed record CameraSettings(
         Saturation = Math.Clamp(Saturation, 0, 2),
         Sharpness = Math.Clamp(Sharpness, 0, 2),
         Ev = Math.Clamp(Ev, -2, 2),
+        Source = Enum.IsDefined(Source) ? Source : CameraSource.Pi,
+        // Invalid values are dropped rather than handed to ffmpeg; the settings page validates first.
+        UsbDevice = CameraInput.IsValidUsbDevice(UsbDevice) ? UsbDevice : "",
+        RtspUrl = CameraInput.IsValidRtspUrl(RtspUrl?.Trim()) ? RtspUrl!.Trim() : "",
+        RtspUser = RtspUser?.Trim() ?? "",
+        RtspPassword = RtspPassword ?? "",
     };
 }
 
-/// <summary>Capture settings, persisted as settings.json in the data directory.</summary>
+/// <summary>
+/// Capture settings, persisted as settings.json in the data directory. Contains the RTSP password,
+/// so the file is only readable by the service user.
+/// </summary>
 public sealed class CameraSettingsStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
@@ -79,6 +93,10 @@ public sealed class CameraSettingsStore
             // Write to a temp file first so a power cut cannot leave a half-written settings.json.
             var tmp = _path + ".tmp";
             await File.WriteAllTextAsync(tmp, JsonSerializer.Serialize(normalized, JsonOptions));
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(tmp, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            }
             File.Move(tmp, _path, overwrite: true);
             _current = normalized;
         }

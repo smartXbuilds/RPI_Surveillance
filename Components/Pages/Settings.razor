@@ -14,8 +14,53 @@
 <MudText Typo="Typo.h5" Class="mb-4">@Locals.SettingsHeading</MudText>
 
 <MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6" Class="mb-2">@Locals.SettingsCamera</MudText>
+    <MudStack Spacing="3">
+        <MudSelect T="CameraSource" @bind-Value="_source" Label="@Locals.SettingsCameraSource" Variant="Variant.Outlined">
+            <MudSelectItem T="CameraSource" Value="CameraSource.Pi">@Locals.CameraSourcePi</MudSelectItem>
+            <MudSelectItem T="CameraSource" Value="CameraSource.Usb">@Locals.CameraSourceUsb</MudSelectItem>
+            <MudSelectItem T="CameraSource" Value="CameraSource.Rtsp">@Locals.CameraSourceRtsp</MudSelectItem>
+        </MudSelect>
+        @if (_source == CameraSource.Usb)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudSelect T="string" @bind-Value="_usbDevice" Label="@Locals.SettingsUsbDevice" Variant="Variant.Outlined"
+                           Disabled="_usbCameras.Count == 0" HelperText="@(_usbCameras.Count == 0 ? Locals.SettingsUsbNone : null)">
+                    @foreach (var cam in _usbCameras)
+                    {
+                        <MudSelectItem T="string" Value="@cam.Device">@($"{cam.Name} ({cam.Device})")</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="FindUsbCameras" aria-label="@Locals.SettingsUsbRefresh" />
+            </MudStack>
+        }
+        @if (_source == CameraSource.Rtsp)
+        {
+            <MudTextField T="string" @bind-Value="_rtspUrl" Label="@Locals.SettingsRtspUrl" HelperText="@Locals.SettingsRtspUrlHelp"
+                          Placeholder="rtsp://192.168.1.50:554/stream1" Variant="Variant.Outlined" />
+            <MudStack Row="true" Spacing="2">
+                <MudTextField T="string" @bind-Value="_rtspUser" Label="@Locals.SettingsRtspUser" Variant="Variant.Outlined"
+                              autocomplete="off" />
+                <MudTextField T="string" @bind-Value="_rtspPassword" Label="@Locals.SettingsRtspPassword" Variant="Variant.Outlined"
+                              InputType="InputType.Password" autocomplete="new-password"
+                              HelperText="@(_rtspPasswordSet ? Locals.SettingsRtspPasswordKeep : null)" />
+            </MudStack>
+        }
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">@SourceHint</MudText>
+        <div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="SaveCameraAsync">@Locals.CommonSave</MudButton>
+        </div>
+    </MudStack>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-4 mb-4">
     <MudText Typo="Typo.h6" Class="mb-2">@Locals.SettingsCapture</MudText>
     <MudStack Spacing="3">
+        @if (Store.Current.Source == CameraSource.Rtsp)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined">@Locals.SettingsResolutionRtsp</MudAlert>
+        }
         <MudNumericField T="int" @bind-Value="_interval" Label="@Locals.SettingsInterval"
                          HelperText="@Locals.SettingsIntervalHelp" Min="0" Variant="Variant.Outlined" />
         <MudSelect T="string" Value="ResolutionPreset" ValueChanged="SetResolutionPreset"
@@ -42,6 +87,10 @@
 <MudPaper Outlined="true" Class="pa-4 mb-4">
     <MudText Typo="Typo.h6" Class="mb-2">@Locals.SettingsImageControls</MudText>
     <MudStack Spacing="3">
+        @if (Store.Current.Source != CameraSource.Pi)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined">@Locals.SettingsImageControlsPiOnly</MudAlert>
+        }
         <div>
             <MudText Typo="Typo.body2">@Locals.SettingsBrightness: @_brightness.ToString("0.00")</MudText>
             <MudSlider T="double" @bind-Value="_brightness" Min="-1" Max="1" Step="0.05" Color="Color.Primary" />
@@ -162,6 +211,14 @@
     private AwbMode _awb;
     private bool _hFlip;
     private bool _vFlip;
+    private CameraSource _source;
+    private string _usbDevice = "";
+    private IReadOnlyList<UsbCamera> _usbCameras = [];
+    private string _rtspUrl = "";
+    private string _rtspUser = "";
+    // Never sent to the browser: empty means "keep the stored password".
+    private string _rtspPassword = "";
+    private bool _rtspPasswordSet;
     private IReadOnlyList<SavedNetwork> _saved = [];
     private string? _networkInfo;
 
@@ -171,9 +228,61 @@
         (_interval, _width, _height, _quality) = (current.IntervalSeconds, current.Width, current.Height, current.Quality);
         (_brightness, _contrast, _saturation, _sharpness, _ev, _awb, _hFlip, _vFlip) =
             (current.Brightness, current.Contrast, current.Saturation, current.Sharpness, current.Ev, current.Awb, current.HFlip, current.VFlip);
+        LoadCamera(current);
+        FindUsbCameras();
 
         Network.Changed += OnNetworkChanged;
         await LoadSavedAsync();
+    }
+
+    private void LoadCamera(CameraSettings s)
+    {
+        (_source, _usbDevice, _rtspUrl, _rtspUser) = (s.Source, s.UsbDevice, s.RtspUrl, s.RtspUser);
+        _rtspPassword = "";
+        _rtspPasswordSet = s.RtspPassword.Length > 0;
+    }
+
+    private void FindUsbCameras()
+    {
+        _usbCameras = CameraInput.FindUsbCameras();
+        // Preselect the only/first webcam, a common case with a single USB camera plugged in.
+        if (_usbDevice.Length == 0 && _usbCameras.Count > 0)
+        {
+            _usbDevice = _usbCameras[0].Device;
+        }
+    }
+
+    private string SourceHint => _source switch
+    {
+        CameraSource.Usb => Locals.SettingsSourceUsbHint,
+        CameraSource.Rtsp => Locals.SettingsSourceRtspHint,
+        _ => Locals.SettingsSourcePiHint,
+    };
+
+    private async Task SaveCameraAsync()
+    {
+        var url = _rtspUrl.Trim();
+        if (_source == CameraSource.Usb && !CameraInput.IsValidUsbDevice(_usbDevice))
+        {
+            Snackbar.Add(Locals.SettingsUsbRequired, Severity.Error);
+            return;
+        }
+        if (_source == CameraSource.Rtsp && !CameraInput.IsValidRtspUrl(url))
+        {
+            Snackbar.Add(Locals.SettingsRtspInvalid, Severity.Error);
+            return;
+        }
+        var current = Store.Current;
+        await Store.UpdateAsync(current with
+        {
+            Source = _source,
+            UsbDevice = _source == CameraSource.Usb ? _usbDevice : current.UsbDevice,
+            RtspUrl = _source == CameraSource.Rtsp ? url : current.RtspUrl,
+            RtspUser = _source == CameraSource.Rtsp ? _rtspUser : current.RtspUser,
+            RtspPassword = _source == CameraSource.Rtsp && _rtspPassword.Length > 0 ? _rtspPassword : current.RtspPassword,
+        });
+        LoadCamera(Store.Current);
+        Snackbar.Add(Locals.SettingsSaved, Severity.Success);
     }
 
     private string ResolutionPreset =>
@@ -227,9 +336,13 @@
 
     private async Task SaveAsync()
     {
-        await Store.UpdateAsync(new CameraSettings(
-            _interval, _width, _height, _quality,
-            _brightness, _contrast, _saturation, _sharpness, _ev, _awb, _hFlip, _vFlip));
+        // "with": the camera source lives in the same settings and is saved by its own card.
+        await Store.UpdateAsync(Store.Current with
+        {
+            IntervalSeconds = _interval, Width = _width, Height = _height, Quality = _quality,
+            Brightness = _brightness, Contrast = _contrast, Saturation = _saturation, Sharpness = _sharpness,
+            Ev = _ev, Awb = _awb, HFlip = _hFlip, VFlip = _vFlip,
+        });
         // Show what was actually stored, the store clamps values to what the camera accepts.
         var saved = Store.Current;
         (_interval, _width, _height, _quality) = (saved.IntervalSeconds, saved.Width, saved.Height, saved.Quality);

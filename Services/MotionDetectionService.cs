@@ -32,6 +32,7 @@ public sealed class MotionDetectionService(
 
     private static readonly TimeSpan SampleInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan DisabledPollInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan ProbeFailureBackoff = TimeSpan.FromSeconds(30);
 
     private byte[]? _baseline;
 
@@ -69,7 +70,11 @@ public sealed class MotionDetectionService(
             }
             catch (Exception ex)
             {
-                log.LogWarning("Motion probe failed: {Message}", ex.Message);
+                // Back off: an unplugged webcam or unreachable network camera would otherwise be retried
+                // every few seconds, flooding the log and keeping the camera gate (live view) busy.
+                log.LogWarning("Motion probe failed, retrying in {Seconds}s: {Message}", ProbeFailureBackoff.TotalSeconds, ex.Message);
+                _baseline = null;
+                await Task.Delay(ProbeFailureBackoff, stoppingToken);
                 continue;
             }
 

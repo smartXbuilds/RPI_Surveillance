@@ -4,11 +4,11 @@ using Microsoft.Extensions.Options;
 namespace RpiCam.Services;
 
 /// <summary>
-/// Stand-in for development: ffmpeg's built-in test pattern generator instead of rpicam-vid, so the
+/// Stand-in for the Pi camera during development: ffmpeg's test pattern generator instead of rpicam-vid, so the
 /// motion-clip and live-view code paths can be exercised without the Pi's camera. Needs a local
 /// ffmpeg; if it is missing this reports a clear error instead of silently doing nothing.
 /// </summary>
-public sealed class SimulatedVideoPipeline(IOptions<RpiCamOptions> options) : IVideoPipeline
+public sealed class SimulatedVideoPipeline(IOptions<RpiCamOptions> options) : IPiVideoPipeline
 {
     private RpiCamOptions Options => options.Value;
 

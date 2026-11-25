@@ -535,4 +535,64 @@
   <data name="NotFoundHome" xml:space="preserve">
     <value>Back to the gallery</value>
   </data>
+  <data name="SettingsCamera" xml:space="preserve">
+    <value>Camera</value>
+  </data>
+  <data name="SettingsCameraSource" xml:space="preserve">
+    <value>Camera type</value>
+  </data>
+  <data name="CameraSourcePi" xml:space="preserve">
+    <value>Raspberry Pi camera (ribbon cable)</value>
+  </data>
+  <data name="CameraSourceUsb" xml:space="preserve">
+    <value>USB webcam</value>
+  </data>
+  <data name="CameraSourceRtsp" xml:space="preserve">
+    <value>Network camera (RTSP)</value>
+  </data>
+  <data name="SettingsUsbDevice" xml:space="preserve">
+    <value>USB device</value>
+  </data>
+  <data name="SettingsUsbNone" xml:space="preserve">
+    <value>No USB camera found. Plug it in and search again.</value>
+  </data>
+  <data name="SettingsUsbRefresh" xml:space="preserve">
+    <value>Search again</value>
+  </data>
+  <data name="SettingsUsbRequired" xml:space="preserve">
+    <value>Please select a USB camera.</value>
+  </data>
+  <data name="SettingsRtspUrl" xml:space="preserve">
+    <value>RTSP address</value>
+  </data>
+  <data name="SettingsRtspUrlHelp" xml:space="preserve">
+    <value>The stream address from the camera's manual or web interface, e.g. rtsp://192.168.1.50:554/stream1</value>
+  </data>
+  <data name="SettingsRtspUser" xml:space="preserve">
+    <value>User (optional)</value>
+  </data>
+  <data name="SettingsRtspPassword" xml:space="preserve">
+    <value>Password (optional)</value>
+  </data>
+  <data name="SettingsRtspPasswordKeep" xml:space="preserve">
+    <value>A password is stored. Leave empty to keep it.</value>
+  </data>
+  <data name="SettingsRtspInvalid" xml:space="preserve">
+    <value>The address must start with rtsp:// or rtsps://.</value>
+  </data>
+  <data name="SettingsSourcePiHint" xml:space="preserve">
+    <value>All functions, including the image controls below.</value>
+  </data>
+  <data name="SettingsSourceUsbHint" xml:space="preserve">
+    <value>Pictures, live view, motion detection and clips. The image controls do not apply. Video is encoded by the Pi's hardware encoder.</value>
+  </data>
+  <data name="SettingsSourceRtspHint" xml:space="preserve">
+    <value>Pictures, live view, motion detection and clips. Set the camera to H.264 (H.265 cannot be played in the browser). Resolution and image are set in the camera itself.</value>
+  </data>
+  <data name="SettingsResolutionRtsp" xml:space="preserve">
+    <value>With a network camera, the camera sets the resolution; the values here are not used.</value>
+  </data>
+  <data name="SettingsImageControlsPiOnly" xml:space="preserve">
+    <value>The image controls only apply to the Raspberry Pi camera.</value>
+  </data>
 </root>

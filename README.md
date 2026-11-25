@@ -1,10 +1,12 @@
 # RpiCam
 
 > **English:** A self-contained camera web app for a Raspberry Pi 3 A+ running DietPi: photo gallery, live view, motion
-> detection with pictures or video clips, and a Wi-Fi hotspot with switching to a normal Wi-Fi. Blazor Server (.NET 10),
+> detection with pictures or video clips, and a Wi-Fi hotspot with switching to a normal Wi-Fi. Works with the Raspberry Pi
+> camera, USB webcams and RTSP network cameras. Blazor Server (.NET 10),
 > MudBlazor 9. The documentation below is in German; issues in English or German are welcome.
 
-Kamera-Weboberfläche für einen Raspberry Pi 3 A+ (DietPi, Raspberry-Pi-Kamera). Blazor Server, .NET 10, MudBlazor 9.
+Kamera-Weboberfläche für einen Raspberry Pi 3 A+ (DietPi). Blazor Server, .NET 10, MudBlazor 9. Als Kamera dient die
+Raspberry-Pi-Kamera, eine USB-Webcam oder eine Netzwerkkamera (RTSP), siehe "Kameras" unten.
 
 - **Galerie:** Aufnahmen und Bewegungs-Videoclips ansehen, einzeln oder gesammelt löschen, einzeln oder als ZIP herunterladen, manuell oder im
   Intervall aufnehmen.
@@ -15,7 +17,7 @@ Kamera-Weboberfläche für einen Raspberry Pi 3 A+ (DietPi, Raspberry-Pi-Kamera)
   auf `/motion` (mit Download/Löschen).
 - **WLAN:** Der Pi ist standardmäßig ein **Hotspot**. Die App scannt nach Netzwerken, verbindet nach Passworteingabe und wechselt dabei vom Hotspot in den Client-Modus.
   Schlägt das fehl, startet der Hotspot automatisch wieder.
-- **Einstellungen:** Aufnahme (Intervall, Auflösung, Qualität), Bildregler (Helligkeit, Kontrast, Sättigung, Schärfe, Belichtungskorrektur, Weißabgleich,
+- **Einstellungen:** Kameratyp, Aufnahme (Intervall, Auflösung, Qualität), Bildregler (Helligkeit, Kontrast, Sättigung, Schärfe, Belichtungskorrektur, Weißabgleich,
   spiegeln), gespeicherte Netzwerke **entfernen** (das aktive Netzwerk entfernen = zurück zum Hotspot), Systemzeit vom Browser übernehmen (ohne Internet
   hat der Pi keine Uhr), Sprache (Deutsch/Englisch).
 - Alles hinter einem Login (ein Konto, Cookie). Das Konto legt man beim **ersten Aufruf** im Browser selbst an, siehe "Erster Start" unten.
@@ -54,7 +56,7 @@ hellen Block, damit sich das Auslösen auch ohne Kamera beobachten lässt.
    Architekturneutral, nicht mit `-r linux-arm64`: Das Paket ist reine verwaltete Bibliotheken und läuft so auch auf dem Entwicklungsrechner (Rauchtest).
 4. SD-Karte in den Pi, Strom an. Beim ersten Start (ca. 10-20 Minuten, braucht das Heim-WLAN als Internet) installiert das Skript
    NetworkManager, `rpicam-apps-lite`, `ffmpeg`, die .NET-10-Laufzeit, die App als systemd-Dienst `rpicam`, das Hotspot-Profil und die
-   Kamera-Konfiguration in `config.txt` (siehe "Kamera-Hardware" unten). Danach löscht es die Zugangsdaten (`rpicam.env`,
+   Kamera-Konfiguration in `config.txt` (siehe "Raspberry-Pi-Kamera" unten). Danach löscht es die Zugangsdaten (`rpicam.env`,
    WLAN-Schlüssel) und startet neu.
 5. Verbinde dich mit dem Hotspot und öffne **http://192.168.4.1**. Beim ersten Aufruf legst du dort das Konto an.
 
@@ -85,7 +87,31 @@ Start automatisch in `account.json`; danach können die beiden Zeilen gelöscht 
 | Video/Encoder prüfen | `rpicam-vid -t 3000 --codec h264 -o - \| ffmpeg -f h264 -i pipe:0 -c copy -f mp4 -movflags frag_keyframe+empty_moov -y /tmp/t.mp4` - bei "failed to open V4L2 H264 encoder": `bcm2835-codec` fehlt (siehe deploy/) |
 | Netzwerk | `nmcli device`, `nmcli connection show` (Hotspot-Profil: `rpicam-hotspot`) |
 
-## Kamera-Hardware
+## Kameras
+
+Der Kameratyp wird unter **Einstellungen → Kamera** gewählt. Fotos, Live-Ansicht, Bewegungserkennung und Clips funktionieren
+mit allen drei:
+
+| | Raspberry-Pi-Kamera | USB-Webcam | Netzwerkkamera (RTSP) |
+|---|---|---|---|
+| Angesprochen über | `rpicam-still` / `rpicam-vid` | `ffmpeg -f v4l2` | `ffmpeg`, erst TCP, sonst UDP |
+| Auswahl | - | Gerät aus der Liste (`/dev/video*`, die Pi-eigenen Codec-/ISP-Knoten sind ausgeblendet) | Adresse `rtsp://…`/`rtsps://…`, optional Benutzer und Passwort |
+| Video | Hardware-H.264, nur umverpackt | muss nach H.264 umgerechnet werden: Hardware-Encoder `h264_v4l2m2m` (Option `RpiCam:H264Encoder`) | meist schon H.264, nur umverpackt (`-c copy`) |
+| Bildregler | ja | nein | nein (in der Kamera selbst einstellen) |
+| Auflösung | aus den Einstellungen | aus den Einstellungen, der Treiber nimmt die nächstpassende | bestimmt die Kamera |
+
+Hinweise:
+- **RTSP:** Die Kamera auf **H.264** stellen - H.265-Streams kann der Browser nicht abspielen. Das RTSP-Passwort liegt in
+  `/var/lib/rpicam/settings.json` (nur root lesbar) und wird nie an den Browser zurückgeschickt. Ist die Kamera nicht
+  erreichbar, bricht jeder Zugriff nach 10 Sekunden ab; die Bewegungserkennung wartet nach einem Fehler 30 Sekunden.
+- **USB:** Auf dem Pi 3 A+ ist die Umrechnung für Live-Ansicht und Clips das Engste: sie läuft auf dem Hardware-Encoder
+  (`bcm2835-codec`, richtet das Setup-Skript ein), Webcams mit MJPEG-Ausgabe müssen aber trotzdem dekodiert werden. Bei
+  Rucklern die Live-Ansicht klein halten. Auf einem Entwicklungsrechner ohne Hardware-Encoder `RpiCam:H264Encoder=libx264`
+  setzen (steht in `appsettings.Development.json`).
+- Im **Simulationsmodus** wird nur die Raspberry-Pi-Kamera simuliert - eine USB-Webcam oder Netzwerkkamera lässt sich also
+  auch am Entwicklungsrechner echt ausprobieren.
+
+### Raspberry-Pi-Kamera
 
 Getestet mit der **AZ-Delivery Raspberry Pi Kamera V1.3** (OmniVision OV5647, 5 MP, kein EEPROM). `camera_auto_detect` allein
 funktioniert damit nicht zuverlässig (erkennt teils fälschlich `imx708`); das Setup-Skript trägt daher explizit

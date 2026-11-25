@@ -70,18 +70,24 @@ builder.Services.AddSingleton<ImageStore>();
 builder.Services.AddSingleton<ClipStore>();
 builder.Services.AddSingleton<LiveStreamSession>();
 builder.Services.AddSingleton<ISystemTimeService, SystemTimeService>();
+// Simulate replaces the network and the Pi camera; USB and RTSP cameras are real in both modes,
+// so a webcam or network camera can be tried on a development machine.
 if (options.Simulate)
 {
-    builder.Services.AddSingleton<ICameraService, SimulatedCameraService>();
+    builder.Services.AddSingleton<IPiCameraBackend, SimulatedCameraBackend>();
     builder.Services.AddSingleton<INetworkService, SimulatedNetworkService>();
-    builder.Services.AddSingleton<IVideoPipeline, SimulatedVideoPipeline>();
+    builder.Services.AddSingleton<IPiVideoPipeline, SimulatedVideoPipeline>();
 }
 else
 {
-    builder.Services.AddSingleton<ICameraService, RpiCameraService>();
+    builder.Services.AddSingleton<IPiCameraBackend, RpiCameraBackend>();
     builder.Services.AddSingleton<INetworkService, NmcliNetworkService>();
-    builder.Services.AddSingleton<IVideoPipeline, RpiVideoPipeline>();
+    builder.Services.AddSingleton<IPiVideoPipeline, RpiVideoPipeline>();
 }
+builder.Services.AddSingleton<FfmpegCameraBackend>();
+builder.Services.AddSingleton<ICameraService, CameraService>();
+builder.Services.AddSingleton<FfmpegVideoPipeline>();
+builder.Services.AddSingleton<IVideoPipeline, VideoPipeline>();
 builder.Services.AddHostedService<CaptureScheduler>();
 builder.Services.AddHostedService<HotspotBootstrapper>();
 builder.Services.AddSingleton<MotionDetectionService>();

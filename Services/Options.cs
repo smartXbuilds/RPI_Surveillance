@@ -22,6 +22,12 @@ public sealed class RpiCamOptions
 
     public string FfmpegCommand { get; set; } = "ffmpeg";
 
+    /// <summary>
+    /// H.264 encoder for USB webcams (their MJPEG/raw frames have to be encoded for the browser).
+    /// h264_v4l2m2m is the Pi's hardware encoder; "libx264" for a development PC (software, CPU-heavy).
+    /// </summary>
+    public string H264Encoder { get; set; } = "h264_v4l2m2m";
+
     /// <summary>Capturing pauses when less free space than this is left on the data volume.</summary>
     public int MinFreeMegabytes { get; set; } = 200;
 
