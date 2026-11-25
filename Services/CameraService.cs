@@ -239,11 +239,7 @@ public sealed class FfmpegCameraBackend(IOptions<RpiCamOptions> options, IProces
     {
         var args = new List<string> { "-hide_banner", "-loglevel", "error", "-nostdin" };
         args.AddRange(CameraInput.Args(s, s.Width, s.Height, framerate: null));
-        if (s.Source == CameraSource.Usb)
-        {
-            // Webcams start dark and adjust exposure over the first frames; skip the first second.
-            args.AddRange(["-ss", "1"]);
-        }
+        args.AddRange(WarmUpArgs(s));
         // ffmpeg's JPEG quality is a scale from 2 (best) to 31: map the 10..100 setting onto it.
         var qscale = (int)Math.Round(31 - ((s.Quality - 10) * 29 / 90.0));
         args.AddRange(["-frames:v", "1", "-q:v", qscale.ToString(CultureInfo.InvariantCulture), "-f", "mjpeg", "-y", path]);
@@ -255,6 +251,7 @@ public sealed class FfmpegCameraBackend(IOptions<RpiCamOptions> options, IProces
         var args = new List<string> { "-hide_banner", "-loglevel", "error", "-nostdin" };
         // Ask a webcam for a small picture right away; ffmpeg scales whatever arrives to the probe size.
         args.AddRange(CameraInput.Args(s, 320, 240, framerate: null));
+        args.AddRange(WarmUpArgs(s));
         args.AddRange(
         [
             "-vf", $"scale={Probe.Width}:{Probe.Height}", "-pix_fmt", "yuv420p",
@@ -262,6 +259,14 @@ public sealed class FfmpegCameraBackend(IOptions<RpiCamOptions> options, IProces
         ]);
         await RunAsync(args, ct);
     }
+
+    /// <summary>
+    /// A webcam re-adjusts its exposure every time it is opened, so the first frames vary in brightness.
+    /// For the motion probe that alone looked like motion on every sample (measured with a LifeCam
+    /// HD-3000: 28% of the pixels changed between two probes of a still scene, 0% after one second).
+    /// </summary>
+    private static IEnumerable<string> WarmUpArgs(CameraSettings s) =>
+        s.Source == CameraSource.Usb ? ["-ss", "1"] : [];
 
     private async Task RunAsync(IEnumerable<string> args, CancellationToken ct)
     {
