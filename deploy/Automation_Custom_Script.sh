@@ -9,7 +9,7 @@
 #   - a Wi-Fi hotspot that is the default network; the app can switch to a normal Wi-Fi and back
 #
 # Inputs, on the FAT partition (mounted at /boot/firmware):
-#   rpicam.env    HOTSPOT_SSID, HOTSPOT_PSK, APP_ADMIN_USER, APP_ADMIN_PASSWORD,
+#   rpicam.env    HOTSPOT_SSID, HOTSPOT_PSK,
 #                 CAMERA_OVERLAY (optional, default ov5647 - the AZ-Delivery V1.3 camera this
 #                 project targets; set to imx708/imx219/imx477/... for a different sensor)
 #   rpicam-app/   publish output of the RpiCam project (framework-dependent, linux-arm64)
@@ -54,8 +54,6 @@ step "Konfiguration lesen"
 env_get() { sed -n "s/^$1=//p" "$ENV_FILE" | head -1 | tr -d '\r'; }
 HOTSPOT_SSID=$(env_get HOTSPOT_SSID)
 HOTSPOT_PSK=$(env_get HOTSPOT_PSK)
-APP_ADMIN_USER=$(env_get APP_ADMIN_USER)
-APP_ADMIN_PASSWORD=$(env_get APP_ADMIN_PASSWORD)
 CAMERA_OVERLAY=$(env_get CAMERA_OVERLAY)
 CAMERA_OVERLAY=${CAMERA_OVERLAY:-ov5647}
 
@@ -63,12 +61,10 @@ CAMERA_OVERLAY=${CAMERA_OVERLAY:-ov5647}
 plain() { [[ -n $1 && $1 != *["'\"\\"]* ]]; }
 plain "$HOTSPOT_SSID" || fail "HOTSPOT_SSID fehlt oder enthaelt Anfuehrungszeichen/Backslash"
 plain "$HOTSPOT_PSK" || fail "HOTSPOT_PSK fehlt oder enthaelt Anfuehrungszeichen/Backslash"
-plain "$APP_ADMIN_USER" || fail "APP_ADMIN_USER fehlt oder enthaelt Anfuehrungszeichen/Backslash"
-plain "$APP_ADMIN_PASSWORD" || fail "APP_ADMIN_PASSWORD fehlt oder enthaelt Anfuehrungszeichen/Backslash"
 plain "$CAMERA_OVERLAY" || fail "CAMERA_OVERLAY enthaelt Anfuehrungszeichen/Backslash"
 ((${#HOTSPOT_PSK} >= 8 && ${#HOTSPOT_PSK} <= 63)) || fail "HOTSPOT_PSK muss 8 bis 63 Zeichen lang sein"
 ((${#HOTSPOT_SSID} <= 32)) || fail "HOTSPOT_SSID darf hoechstens 32 Zeichen lang sein"
-echo "Hotspot-SSID: $HOTSPOT_SSID, App-Benutzer: $APP_ADMIN_USER, Kamera-Overlay: $CAMERA_OVERLAY"
+echo "Hotspot-SSID: $HOTSPOT_SSID, Kamera-Overlay: $CAMERA_OVERLAY"
 
 # ---------------------------------------------------------------------------------------------
 step "Pakete installieren"
@@ -105,7 +101,8 @@ install -d -m 755 "$APP_DIR"
 cp -a "$APP_SRC"/. "$APP_DIR"/ || fail "App konnte nicht kopiert werden"
 install -d -m 700 "$DATA_DIR" "$CONF_DIR"
 
-# Root-only: contains the hotspot and login passwords.
+# Root-only: contains the hotspot password. The app login is created in the browser on first start
+# (stored hashed in $DATA_DIR/account.json).
 (
 	umask 077
 	cat > "$CONF_DIR/rpicam.env" << EOF
@@ -117,8 +114,6 @@ RpiCam__WifiInterface=$WIFI_IF
 RpiCam__HotspotConnection=$HOTSPOT_CON
 RpiCam__HotspotSsid=$HOTSPOT_SSID
 RpiCam__HotspotPassword=$HOTSPOT_PSK
-Auth__User=$APP_ADMIN_USER
-Auth__Password=$APP_ADMIN_PASSWORD
 EOF
 )
 
@@ -223,7 +218,7 @@ fi
 
 touch "$DONE_MARKER"
 step "Fertig. Neustart in 45 Sekunden, danach startet der Hotspot '$HOTSPOT_SSID'."
-echo "Die App ist dann unter http://192.168.4.1 erreichbar."
+echo "Die App ist dann unter http://192.168.4.1 erreichbar, dort beim ersten Aufruf das Konto anlegen."
 copy_log
 # Delayed, so DietPi can finish its own first-boot steps after this script returns.
 systemd-run --on-active=45 --unit=rpicam-final-reboot systemctl reboot

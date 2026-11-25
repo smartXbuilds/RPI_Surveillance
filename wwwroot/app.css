@@ -84,6 +84,12 @@ html, body, .mud-typography, .mud-button-root, .mud-input-root, .mud-chip {
     color: #a99fff;
 }
 
+.login-hint {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
 .login-error {
     margin: 0;
     color: #ff6b81;

@@ -148,8 +148,29 @@
   <data name="LoginExpired" xml:space="preserve">
     <value>Die Seite ist abgelaufen. Bitte erneut versuchen.</value>
   </data>
-  <data name="LoginNotConfigured" xml:space="preserve">
-    <value>Auf diesem Gerät ist kein Login konfiguriert.</value>
+  <data name="PageTitleSetup" xml:space="preserve">
+    <value>Einrichten</value>
+  </data>
+  <data name="SetupTitle" xml:space="preserve">
+    <value>Konto anlegen</value>
+  </data>
+  <data name="SetupIntro" xml:space="preserve">
+    <value>Erster Start: Lege das Konto für diese Kamera an. Passwort mindestens {0} Zeichen.</value>
+  </data>
+  <data name="SetupConfirm" xml:space="preserve">
+    <value>Passwort wiederholen</value>
+  </data>
+  <data name="SetupButton" xml:space="preserve">
+    <value>Konto anlegen</value>
+  </data>
+  <data name="SetupMismatch" xml:space="preserve">
+    <value>Die Passwörter stimmen nicht überein.</value>
+  </data>
+  <data name="SetupTooShort" xml:space="preserve">
+    <value>Das Passwort braucht mindestens {0} Zeichen.</value>
+  </data>
+  <data name="SetupInvalidUser" xml:space="preserve">
+    <value>Bitte einen Benutzernamen eingeben (höchstens 64 Zeichen).</value>
   </data>
   <data name="GalleryHeading" xml:space="preserve">
     <value>Aufgenommene Bilder</value>

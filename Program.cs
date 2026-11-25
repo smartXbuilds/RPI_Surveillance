@@ -64,6 +64,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization(o => o.FallbackPolicy = o.DefaultPolicy);
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddSingleton<LoginThrottle>();
+builder.Services.AddSingleton<AccountStore>();
 
 builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
 builder.Services.AddSingleton<CameraGate>();
@@ -96,9 +97,10 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 
-if (string.IsNullOrEmpty(app.Configuration[$"{AuthOptions.Section}:User"]) || string.IsNullOrEmpty(app.Configuration[$"{AuthOptions.Section}:Password"]))
+// Created right away, so an old Auth__* login is taken over at startup and not only on the first request.
+if (!app.Services.GetRequiredService<AccountStore>().HasAccount)
 {
-    app.Logger.LogError("No login configured (Auth__User / Auth__Password): nobody can sign in");
+    app.Logger.LogWarning("No account yet: the first visitor creates it on /setup");
 }
 
 // Leftovers of an interrupted ZIP download.

@@ -1,7 +1,5 @@
 using System.IO.Compression;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -24,7 +22,7 @@ public static class Endpoints
         app.MapPost("/account/login", async (
             HttpContext ctx,
             IAntiforgery antiforgery,
-            IOptions<AuthOptions> auth,
+            AccountStore accounts,
             LoginThrottle throttle) =>
         {
             // Validated by hand (the endpoint opts out below): with the automatic check, a stale login
@@ -43,19 +41,17 @@ public static class Endpoints
             var returnUrl = SafeReturnUrl(form.ReturnUrl);
             var client = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-            if (string.IsNullOrEmpty(auth.Value.User) || string.IsNullOrEmpty(auth.Value.Password))
+            if (!accounts.HasAccount)
             {
-                return LoginRedirect("config", returnUrl);
+                return Results.Redirect("/setup");
             }
             if (throttle.IsLocked(client))
             {
                 return LoginRedirect("locked", returnUrl);
             }
 
-            // Both values are always compared, so timing does not reveal which one was wrong.
-            var userOk = FixedTimeEquals(form.Username, auth.Value.User);
-            var passwordOk = FixedTimeEquals(form.Password, auth.Value.Password);
-            if (!(userOk & passwordOk))
+            var user = accounts.Verify(form.Username, form.Password);
+            if (user is null)
             {
                 throttle.RegisterFailure(client);
                 await Task.Delay(1000);
@@ -63,9 +59,41 @@ public static class Endpoints
             }
 
             throttle.Reset(client);
-            var identity = new ClaimsIdentity([new Claim(ClaimTypes.Name, auth.Value.User)], CookieAuthenticationDefaults.AuthenticationScheme);
-            await ctx.SignInAsync(new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = true });
+            await SignInAsync(ctx, user);
             return Results.LocalRedirect(returnUrl);
+        }).DisableAntiforgery().AllowAnonymous();
+
+        // First start: whoever opens the app first creates the one account (only reachable while none exists).
+        app.MapPost("/account/setup", async (HttpContext ctx, IAntiforgery antiforgery, AccountStore accounts) =>
+        {
+            try
+            {
+                await antiforgery.ValidateRequestAsync(ctx);
+            }
+            catch (AntiforgeryValidationException)
+            {
+                return Results.Redirect("/setup?error=expired");
+            }
+
+            var posted = await ctx.Request.ReadFormAsync();
+            string? password = posted["Password"];
+            if (password != posted["Confirm"])
+            {
+                return Results.Redirect("/setup?error=mismatch");
+            }
+            var user = posted["Username"].ToString().Trim();
+            switch (accounts.Create(user, password))
+            {
+                case AccountCreateResult.Created:
+                    await SignInAsync(ctx, user);
+                    return Results.LocalRedirect("/");
+                case AccountCreateResult.AlreadyExists:
+                    return Results.Redirect("/login");
+                case AccountCreateResult.InvalidUser:
+                    return Results.Redirect("/setup?error=user");
+                default:
+                    return Results.Redirect("/setup?error=short");
+            }
         }).DisableAntiforgery().AllowAnonymous();
 
         // GET on purpose: the navigation button is a plain link. The worst a forged request can do is log you out.
@@ -204,10 +232,10 @@ public static class Endpoints
         });
     }
 
-    private static bool FixedTimeEquals(string? provided, string expected) =>
-        CryptographicOperations.FixedTimeEquals(
-            SHA256.HashData(Encoding.UTF8.GetBytes(provided ?? "")),
-            SHA256.HashData(Encoding.UTF8.GetBytes(expected)));
+    private static Task SignInAsync(HttpContext ctx, string user) =>
+        ctx.SignInAsync(
+            new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, user)], CookieAuthenticationDefaults.AuthenticationScheme)),
+            new AuthenticationProperties { IsPersistent = true });
 
     /// <summary>Only same-site paths are allowed as return target, never an absolute or protocol-relative URL.</summary>
     private static string SafeReturnUrl(string? url) =>

@@ -2,6 +2,8 @@
 @layout LoginLayout
 @attribute [AllowAnonymous]
 @attribute [ExcludeFromInteractiveRouting]
+@inject AccountStore Accounts
+@inject NavigationManager Nav
 
 <PageTitle>@Locals.PageTitleLogin</PageTitle>
 
@@ -35,11 +37,19 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
+    // First start: there is nothing to sign in to yet.
+    protected override void OnInitialized()
+    {
+        if (!Accounts.HasAccount)
+        {
+            Nav.NavigateTo("/setup");
+        }
+    }
+
     private string? ErrorMessage => Error switch
     {
         "invalid" => Locals.LoginFailed,
         "locked" => Locals.LoginLocked,
-        "config" => Locals.LoginNotConfigured,
         "expired" => Locals.LoginExpired,
         _ => null,
     };

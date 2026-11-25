@@ -38,7 +38,11 @@ public sealed class RpiCamOptions
     public int ConnectTimeoutSeconds { get; set; } = 30;
 }
 
-/// <summary>Single admin account (section "Auth"), set via Auth__User / Auth__Password.</summary>
+/// <summary>
+/// Old way to set the login (section "Auth", Auth__User / Auth__Password). Only read once: if no
+/// account.json exists yet, <see cref="AccountStore"/> takes these values over. New devices create the
+/// account on the setup page instead.
+/// </summary>
 public sealed class AuthOptions
 {
     public const string Section = "Auth";

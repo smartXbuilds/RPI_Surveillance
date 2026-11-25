@@ -1,0 +1,58 @@
+@page "/setup"
+@layout LoginLayout
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@inject AccountStore Accounts
+@inject NavigationManager Nav
+
+<PageTitle>@Locals.PageTitleSetup</PageTitle>
+
+@* First start: create the one admin account. A plain form post, like the login, so the cookie can be set. *@
+<form method="post" action="/account/setup" class="login-card">
+    <AntiforgeryToken />
+
+    <h1>@Locals.SetupTitle</h1>
+    <p class="login-hint">@string.Format(Locals.SetupIntro, AccountStore.MinPasswordLength)</p>
+
+    @if (ErrorMessage is not null)
+    {
+        <p class="login-error" role="alert">@ErrorMessage</p>
+    }
+
+    <label>
+        @Locals.LoginUser
+        <input name="Username" autocomplete="username" maxlength="@AccountStore.MaxUserLength" autofocus required />
+    </label>
+    <label>
+        @Locals.LoginPassword
+        <input name="Password" type="password" autocomplete="new-password" minlength="@AccountStore.MinPasswordLength" required />
+    </label>
+    <label>
+        @Locals.SetupConfirm
+        <input name="Confirm" type="password" autocomplete="new-password" minlength="@AccountStore.MinPasswordLength" required />
+    </label>
+    <button type="submit">@Locals.SetupButton</button>
+</form>
+
+@code {
+    [SupplyParameterFromQuery]
+    private string? Error { get; set; }
+
+    // Closed for good once the account exists.
+    protected override void OnInitialized()
+    {
+        if (Accounts.HasAccount)
+        {
+            Nav.NavigateTo("/login");
+        }
+    }
+
+    private string? ErrorMessage => Error switch
+    {
+        "mismatch" => Locals.SetupMismatch,
+        "short" => string.Format(Locals.SetupTooShort, AccountStore.MinPasswordLength),
+        "user" => Locals.SetupInvalidUser,
+        "expired" => Locals.LoginExpired,
+        _ => null,
+    };
+}

@@ -18,12 +18,12 @@ Kamera-Weboberfläche für einen Raspberry Pi 3 A+ (DietPi, Raspberry-Pi-Kamera)
 - **Einstellungen:** Aufnahme (Intervall, Auflösung, Qualität), Bildregler (Helligkeit, Kontrast, Sättigung, Schärfe, Belichtungskorrektur, Weißabgleich,
   spiegeln), gespeicherte Netzwerke **entfernen** (das aktive Netzwerk entfernen = zurück zum Hotspot), Systemzeit vom Browser übernehmen (ohne Internet
   hat der Pi keine Uhr), Sprache (Deutsch/Englisch).
-- Alles hinter einem Login (ein Admin-Konto, Cookie).
+- Alles hinter einem Login (ein Konto, Cookie). Das Konto legt man beim **ersten Aufruf** im Browser selbst an, siehe "Erster Start" unten.
 
 ## Entwickeln
 
 ```bash
-dotnet run          # http://localhost:5018, Login dev / dev
+dotnet run          # http://localhost:5018, beim ersten Aufruf Konto anlegen (landet in data/account.json)
 ```
 
 Im Development-Modus läuft die App im **Simulationsmodus** (`RpiCam:Simulate=true`): falsche Kamera (Farbverläufe) und ein
@@ -39,7 +39,7 @@ kurz einen roten Block, damit sich das Auslösen auch ohne Kamera beobachten lä
 2. Auf der Boot-Partition (FAT) eintragen:
    - `dietpi-wifi.txt`: Heim-WLAN (`aWIFI_SSID[0]`, `aWIFI_KEY[0]`). Nur für die Installation beim ersten Start nötig.
    - `dietpi.txt`: `AUTO_SETUP_AUTOMATED=1`, `AUTO_SETUP_NET_WIFI_ENABLED=1`, `AUTO_SETUP_NET_WIFI_COUNTRY_CODE=DE`, Passwort, Hostname (`rpicam`).
-   - `rpicam.env`: `HOTSPOT_SSID`, `HOTSPOT_PSK` (8-63 Zeichen), `APP_ADMIN_USER`, `APP_ADMIN_PASSWORD`. Optional `CAMERA_OVERLAY`
+   - `rpicam.env`: `HOTSPOT_SSID`, `HOTSPOT_PSK` (8-63 Zeichen). Optional `CAMERA_OVERLAY`
      (Standard `ov5647` - die AZ-Delivery-V1.3-Kamera, für die dieses Projekt gebaut ist; bei einer anderen Kamera z.B. `imx708`
      eintragen). Keine Anführungszeichen und keine Backslashes.
    - `config.txt`: nichts Kameraspezifisches nötig, das Setup-Skript trägt `dtoverlay=vc4-kms-v3d,cma-128` und den
@@ -55,10 +55,23 @@ kurz einen roten Block, damit sich das Auslösen auch ohne Kamera beobachten lä
    NetworkManager, `rpicam-apps-lite`, `ffmpeg`, die .NET-10-Laufzeit, die App als systemd-Dienst `rpicam`, das Hotspot-Profil und die
    Kamera-Konfiguration in `config.txt` (siehe "Kamera-Hardware" unten). Danach löscht es die Zugangsdaten (`rpicam.env`,
    WLAN-Schlüssel) und startet neu.
-5. Verbinde dich mit dem Hotspot und öffne **http://192.168.4.1**.
+5. Verbinde dich mit dem Hotspot und öffne **http://192.168.4.1**. Beim ersten Aufruf legst du dort das Konto an.
 
 Das Protokoll der Einrichtung steht in `/boot/firmware/rpicam-setup.log` (auf der SD-Karte, am PC lesbar).
 Nach einem Fehler lässt sich das Skript per SSH wiederholen: `bash /boot/Automation_Custom_Script.sh`.
+
+## Erster Start
+
+Solange kein Konto existiert, leitet die App jeden Aufruf auf **/setup** um: Benutzername und Passwort (mindestens 8 Zeichen)
+eingeben, danach ist man angemeldet und die Einrichtungsseite ist dauerhaft gesperrt. Das Passwort wird nur als gesalzener
+PBKDF2-Hash in `/var/lib/rpicam/account.json` (nur root lesbar) gespeichert.
+
+Wer zuerst auf die Seite kommt, legt das Konto an - deshalb das Konto direkt nach der Installation anlegen. Erreichbar ist
+die Seite nur über den WPA2-geschützten Hotspot (oder das WLAN, in das der Pi schon eingebunden ist).
+
+**Passwort vergessen:** per SSH `rm /var/lib/rpicam/account.json && systemctl restart rpicam`, danach wieder /setup aufrufen.
+Ältere Installationen mit `Auth__User`/`Auth__Password` in `/etc/rpicam/rpicam.env` übernehmen diesen Login beim ersten
+Start automatisch in `account.json`; danach können die beiden Zeilen gelöscht werden.
 
 ## Auf dem Pi
 
@@ -66,7 +79,7 @@ Nach einem Fehler lässt sich das Skript per SSH wiederholen: `bash /boot/Automa
 |---|---|
 | Dienst | `systemctl status rpicam`, Logs: `journalctl -u rpicam` |
 | Konfiguration | `/etc/rpicam/rpicam.env` (nur root), Änderungen mit `systemctl restart rpicam` übernehmen |
-| Daten | `/var/lib/rpicam` (`images/`, `thumbs/`, `motion/` [Clips], `settings.json`, `motion.json`, `motion-events.json`, `keys/`) |
+| Daten | `/var/lib/rpicam` (`account.json`, `images/`, `thumbs/`, `motion/` [Clips], `settings.json`, `motion.json`, `motion-events.json`, `keys/`) |
 | Kamera prüfen | `rpicam-hello --list-cameras`, bei "No cameras available": `i2cdetect -y 10` (Bus leer = Kabel/Hardware, Adresse ohne Antwort = Treiber/Overlay) |
 | Video/Encoder prüfen | `rpicam-vid -t 3000 --codec h264 -o - \| ffmpeg -f h264 -i pipe:0 -c copy -f mp4 -movflags frag_keyframe+empty_moov -y /tmp/t.mp4` - bei "failed to open V4L2 H264 encoder": `bcm2835-codec` fehlt (siehe deploy/) |
 | Netzwerk | `nmcli device`, `nmcli connection show` (Hotspot-Profil: `rpicam-hotspot`) |

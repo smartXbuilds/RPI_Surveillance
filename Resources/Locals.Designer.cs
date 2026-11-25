@@ -103,7 +103,21 @@ namespace RpiCam.Resources
 
         public static string LoginExpired => ResourceManager.GetString("LoginExpired", resourceCulture)!;
 
-        public static string LoginNotConfigured => ResourceManager.GetString("LoginNotConfigured", resourceCulture)!;
+        public static string PageTitleSetup => ResourceManager.GetString("PageTitleSetup", resourceCulture)!;
+
+        public static string SetupTitle => ResourceManager.GetString("SetupTitle", resourceCulture)!;
+
+        public static string SetupIntro => ResourceManager.GetString("SetupIntro", resourceCulture)!;
+
+        public static string SetupConfirm => ResourceManager.GetString("SetupConfirm", resourceCulture)!;
+
+        public static string SetupButton => ResourceManager.GetString("SetupButton", resourceCulture)!;
+
+        public static string SetupMismatch => ResourceManager.GetString("SetupMismatch", resourceCulture)!;
+
+        public static string SetupTooShort => ResourceManager.GetString("SetupTooShort", resourceCulture)!;
+
+        public static string SetupInvalidUser => ResourceManager.GetString("SetupInvalidUser", resourceCulture)!;
 
         public static string GalleryHeading => ResourceManager.GetString("GalleryHeading", resourceCulture)!;
 
