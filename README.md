@@ -2,10 +2,12 @@
 
 > **English:** A small, self-contained camera web app for the Raspberry Pi: photo gallery, live view, motion detection with
 > pictures or video clips, and its own Wi-Fi hotspot. Works with the Raspberry Pi camera, USB webcams and RTSP network
-> cameras, and also runs on a regular Linux PC. Blazor Server (.NET 10), MudBlazor 9. The documentation below is in German;
+> cameras, and also runs on a regular Linux PC. Meant for watching your pets, garden or birdhouse; if you point it at
+> people, local privacy laws apply (see [Datenschutz](#datenschutz-bitte-beachten)). Blazor Server (.NET 10), MudBlazor 9. The documentation below is in German;
 > issues in English or German are welcome.
 
-**RpiCam macht aus einem Raspberry Pi und einer Kamera eine kleine Überwachungskamera mit Weboberfläche.** Du öffnest sie im
+**RpiCam macht aus einem Raspberry Pi und einer Kamera eine kleine Kamera mit Weboberfläche,** gedacht zum Beispiel, um
+nachzusehen, was Hund oder Katze tagsüber treiben, oder um Garten, Vogelhaus oder Terrarium im Blick zu behalten. Du öffnest sie im
 Browser, auf dem Handy oder am PC, ohne App, ohne Cloud und ohne Konto bei irgendeinem Anbieter. Alle Bilder bleiben auf
 dem Gerät.
 
@@ -383,6 +385,26 @@ supported“, obwohl der Sensor am I2C-Bus antwortet.
   „Kamera beschäftigt“.
 - Die Bewegungserkennung vergleicht Helligkeit, keine Objekte: Lichtwechsel oder Schatten können auslösen, sehr kleine
   oder langsame Bewegungen eventuell nicht. Die Empfindlichkeit stellst du unter `/motion` ein.
+
+## Datenschutz: Bitte beachten
+
+RpiCam ist für **Haustiere, Garten und Tiere** gedacht, nicht zum Beobachten von Menschen. Sobald Personen ins Bild
+kommen können, gelten Datenschutzgesetze (in der EU die DSGVO, in Deutschland zusätzlich das Recht am eigenen Bild). Für
+die Einhaltung ist verantwortlich, wer die Kamera aufstellt und betreibt. Ein paar Grundregeln:
+
+- **Nur eigenes Gelände filmen.** Öffentliche Wege, die Straße und Nachbargrundstücke gehören nicht ins Bild. Richte die
+  Kamera so aus, dass sie dort nicht hinsieht.
+- **Mitbewohner, Familie, Gäste, Babysitter, Handwerker** müssen wissen, dass eine Kamera läuft, und sollten einverstanden
+  sein. Heimliches Filmen ist nicht erlaubt; Ton nimmt RpiCam ohnehin nicht auf.
+- **Kennzeichnen**, wenn andere Menschen den gefilmten Bereich betreten können, z.B. mit einem gut sichtbaren Hinweisschild.
+- **Nicht länger speichern als nötig.** Lösche alte Bilder und Clips regelmäßig.
+- **Arbeitsplätze, Mietshäuser, Vereine:** Hier gelten strengere Regeln. Informiere dich vorher, im Zweifel bei der
+  Datenschutzbehörde deines Bundeslandes.
+
+Die Bilder verlassen das Gerät nicht, RpiCam schickt nichts in eine Cloud. Schütze den Zugang trotzdem mit einem guten
+Passwort, denn wer das Passwort kennt, sieht das Kamerabild.
+
+Dieser Abschnitt ist ein Hinweis, keine Rechtsberatung.
 
 ## Fehler melden und Mitwirken
 
