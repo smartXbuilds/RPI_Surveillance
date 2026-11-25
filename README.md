@@ -1,13 +1,18 @@
 # RpiCam
 
-Kamera-Weboberfläche für einen Raspberry Pi 3 A+ (DietPi, Raspberry-Pi-Kamera). Blazor Server, .NET 10, MudBlazor 9,
-gebaut aus dem `BlazorServerTemplate`.
+> **English:** A self-contained camera web app for a Raspberry Pi 3 A+ running DietPi: photo gallery, live view, motion
+> detection with pictures or video clips, and a Wi-Fi hotspot with switching to a normal Wi-Fi. Blazor Server (.NET 10),
+> MudBlazor 9. The documentation below is in German; issues in English or German are welcome.
 
-- **Galerie:** Aufnahmen ansehen, einzeln oder gesammelt löschen, einzeln oder als ZIP herunterladen, manuell oder im Intervall aufnehmen.
+Kamera-Weboberfläche für einen Raspberry Pi 3 A+ (DietPi, Raspberry-Pi-Kamera). Blazor Server, .NET 10, MudBlazor 9.
+
+- **Galerie:** Aufnahmen und Bewegungs-Videoclips ansehen, einzeln oder gesammelt löschen, einzeln oder als ZIP herunterladen, manuell oder im
+  Intervall aufnehmen.
 - **Live-Ansicht:** Fragmentiertes MP4 direkt aus der Kamera (H.264-Hardware-Encoder → `ffmpeg -c copy`, kein Neucodieren), im Browser abspielbar über
   `<video>`. Wird **nicht** aufgezeichnet und nicht auf die SD-Karte geschrieben, siehe "Live-Ansicht" unten.
 - **Bewegungserkennung:** Läuft im Hintergrund (Bilddifferenz alle ~2s über ein kleines Graustufenbild, siehe "Bewegungserkennung" unten). Bei Bewegung
-  wahlweise Bilder im Intervall (landen in der Galerie) oder einen Videoclip fester Länge (eigene Liste mit Download/Löschen).
+  wahlweise Bilder im Intervall oder einen Videoclip fester Länge. Beides landet in der Galerie, Clips zusätzlich im Ereignisprotokoll
+  auf `/motion` (mit Download/Löschen).
 - **WLAN:** Der Pi ist standardmäßig ein **Hotspot**. Die App scannt nach Netzwerken, verbindet nach Passworteingabe und wechselt dabei vom Hotspot in den Client-Modus.
   Schlägt das fehl, startet der Hotspot automatisch wieder.
 - **Einstellungen:** Aufnahme (Intervall, Auflösung, Qualität), Bildregler (Helligkeit, Kontrast, Sättigung, Schärfe, Belichtungskorrektur, Weißabgleich,
@@ -47,7 +52,7 @@ kurz einen roten Block, damit sich das Auslösen auch ohne Kamera beobachten lä
    ```
    Architekturneutral, nicht mit `-r linux-arm64`: Das Paket ist reine verwaltete Bibliotheken und läuft so auch auf dem Entwicklungsrechner (Rauchtest).
 4. SD-Karte in den Pi, Strom an. Beim ersten Start (ca. 10-20 Minuten, braucht das Heim-WLAN als Internet) installiert das Skript
-   NetworkManager, `rpicam-apps-lite`, die .NET-10-Laufzeit, die App als systemd-Dienst `rpicam`, das Hotspot-Profil und die
+   NetworkManager, `rpicam-apps-lite`, `ffmpeg`, die .NET-10-Laufzeit, die App als systemd-Dienst `rpicam`, das Hotspot-Profil und die
    Kamera-Konfiguration in `config.txt` (siehe "Kamera-Hardware" unten). Danach löscht es die Zugangsdaten (`rpicam.env`,
    WLAN-Schlüssel) und startet neu.
 5. Verbinde dich mit dem Hotspot und öffne **http://192.168.4.1**.
@@ -70,10 +75,11 @@ Nach einem Fehler lässt sich das Skript per SSH wiederholen: `bash /boot/Automa
 
 Getestet mit der **AZ-Delivery Raspberry Pi Kamera V1.3** (OmniVision OV5647, 5 MP, kein EEPROM). `camera_auto_detect` allein
 funktioniert damit nicht zuverlässig (erkennt teils fälschlich `imx708`); das Setup-Skript trägt daher explizit
-`dtoverlay=$CAMERA_OVERLAY` (Standard `ov5647`) und `dtoverlay=vc4-kms-v3d,cma-128` in `config.txt` ein und lädt zusätzlich
-das ISP-Kernelmodul (`bcm2835-isp`) über `/etc/modules-load.d/`, das DietPi anders als Raspberry Pi OS nicht automatisch
-lädt - ohne beides meldet `rpicam-hello` "no cameras available" bzw. "platform not supported", obwohl der Sensor am I2C-Bus
-antwortet. Eine andere Kamera anschließen: `CAMERA_OVERLAY` in `rpicam.env` auf den passenden Sensor-Overlay-Namen setzen.
+`dtoverlay=$CAMERA_OVERLAY` (Standard `ov5647`) und `dtoverlay=vc4-kms-v3d,cma-128` in `config.txt` ein. Außerdem lädt es
+das ISP-Modul (`bcm2835-isp`) und den Hardware-H.264-Encoder (`bcm2835-codec`) über `/etc/modules-load.d/` und hebt DietPis
+Blacklist für diese Module (und `vc_sm_cma`) in `/etc/modprobe.d/` auf. DietPi lädt sie anders als Raspberry Pi OS nicht
+automatisch - ohne das meldet `rpicam-hello` "no cameras available" bzw. "platform not supported", obwohl der Sensor am
+I2C-Bus antwortet, und `rpicam-vid` "failed to open V4L2 H264 encoder". Eine andere Kamera anschließen: `CAMERA_OVERLAY` in `rpicam.env` auf den passenden Sensor-Overlay-Namen setzen.
 
 ## Live-Ansicht
 
@@ -104,3 +110,19 @@ fester Länge über dieselbe `rpicam-vid`/`ffmpeg`-Pipeline wie die Live-Ansicht
   alles andere wartet oder meldet "beschäftigt". Auf dem Pi 3 A+ (512 MB RAM) macht das Sinn, sollte aber nicht überraschen.
 - Bewegungserkennung per Bilddifferenz reagiert auf Helligkeitsänderungen im Bild, nicht auf "echte" Objekte - Lichtwechsel oder Schatten können
   auslösen, ein sehr kleines oder sehr langsames Objekt eventuell nicht. Empfindlichkeit in `/motion` anpassen.
+
+## Fehler melden und Mitwirken
+
+Das GitHub-Repository ist ein **Spiegel**, entwickelt wird in einem privaten Repository. Fehler, Fragen und Ideen bitte als
+[Issue](../../issues) eintragen, gern mit Pi-Modell, Kamera-Modul, DietPi-Version und dem Auszug aus `journalctl -u rpicam`
+bzw. `rpicam-setup.log` (vorher Passwörter und SSIDs entfernen). Pull Requests werden nicht direkt gemergt, gute Vorschläge
+werden aber übernommen.
+
+## Lizenz
+
+[Apache License 2.0](LICENSE).
+
+Verwendete Bibliotheken: [MudBlazor](https://github.com/MudBlazor/MudBlazor) (MIT),
+[Serilog](https://github.com/serilog/serilog) (Apache-2.0), [ImageSharp](https://github.com/SixLabors/ImageSharp)
+(Six Labors Split License - für Open-Source-Software unter Apache-2.0), .NET/ASP.NET Core (MIT).
+`rpicam-apps` (BSD-2-Clause) und `ffmpeg` (LGPL/GPL) werden nur als eigene Programme aufgerufen und nicht mitgeliefert.
