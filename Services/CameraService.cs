@@ -1,6 +1,4 @@
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace RpiCam.Services;
 
@@ -12,10 +10,26 @@ public interface ICameraService
     Task<ImageInfo> CaptureAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Takes a small, fast picture for internal use (motion detection probing). Never written to
-    /// the gallery. Still goes through the same camera gate as every other capture.
+    /// Takes a small, fast picture for internal use (motion detection probing) and returns its
+    /// brightness values, <see cref="Probe.Width"/> × <see cref="Probe.Height"/> bytes, row by row.
+    /// Never written to the gallery. Still goes through the same camera gate as every other capture.
     /// </summary>
     Task<byte[]> CaptureProbeAsync(CancellationToken ct = default);
+}
+
+/// <summary>
+/// The motion probe picture. Captured as raw YUV420 (rpicam-still --encoding yuv420), which starts
+/// with the Y (brightness) plane: exactly the grayscale picture the frame diff needs, no decoding.
+/// </summary>
+public static class Probe
+{
+    public const int Width = 160;
+    public const int Height = 120;
+
+    public const int GrayBytes = Width * Height;
+
+    /// <summary>Y plane plus the quarter-size U and V planes.</summary>
+    public const int Yuv420Bytes = GrayBytes * 3 / 2;
 }
 
 public abstract class CameraServiceBase(
@@ -62,13 +76,19 @@ public abstract class CameraServiceBase(
     {
         var tmpDir = Path.Combine(Path.GetFullPath(Options.DataDir), "tmp");
         Directory.CreateDirectory(tmpDir);
-        var path = Path.Combine(tmpDir, $"probe-{Guid.NewGuid():N}.jpg");
+        var path = Path.Combine(tmpDir, $"probe-{Guid.NewGuid():N}.yuv");
 
         using var _ = await gate.AcquireAsync(ct);
         try
         {
             await CaptureProbeToFileAsync(path, ct);
-            return await File.ReadAllBytesAsync(path, ct);
+            var yuv = await File.ReadAllBytesAsync(path, ct);
+            // Any other size means a different resolution or row padding, and the bytes would be misread.
+            if (yuv.Length != Probe.Yuv420Bytes)
+            {
+                throw new CameraException($"Probe picture has {yuv.Length} bytes, expected {Probe.Yuv420Bytes} (YUV420 {Probe.Width}x{Probe.Height}).");
+            }
+            return yuv[..Probe.GrayBytes];
         }
         finally
         {
@@ -110,7 +130,11 @@ public sealed class RpiCameraService(
     protected override async Task CaptureProbeToFileAsync(string path, CancellationToken ct)
     {
         // Small, quick, fixed settle time: this only feeds the motion-detection frame diff, not the gallery.
-        string[] args = ["-n", "-t", "300", "--width", "160", "--height", "120", "-q", "50", "-o", path];
+        string[] args =
+        [
+            "-n", "-t", "300", "--width", Probe.Width.ToString(), "--height", Probe.Height.ToString(),
+            "--encoding", "yuv420", "-o", path,
+        ];
         var result = await runner.RunAsync(Options.CameraCommand, args, TimeSpan.FromSeconds(10), ct);
         if (!result.Success)
         {
@@ -150,56 +174,50 @@ public sealed class RpiCameraService(
         string.IsNullOrWhiteSpace(text) ? "rpicam-still failed." : text.Length <= 300 ? text : text[..300];
 }
 
-/// <summary>Stand-in camera for development: writes a colour gradient that changes with every shot.</summary>
+/// <summary>
+/// Stand-in camera for development: ffmpeg's test pattern (like the simulated live view), in a
+/// different colour with every shot. Needs ffmpeg installed on the development machine.
+/// </summary>
 public sealed class SimulatedCameraService(
     ImageStore store,
     CameraSettingsStore settings,
     IOptions<RpiCamOptions> options,
-    CameraGate gate) : CameraServiceBase(store, settings, options, gate)
+    CameraGate gate,
+    IProcessRunner runner) : CameraServiceBase(store, settings, options, gate)
 {
     private int _shot;
 
     protected override async Task CaptureToFileAsync(string path, CameraSettings s, CancellationToken ct)
     {
-        var shot = Interlocked.Increment(ref _shot);
-        const int width = 800, height = 600;
-        using var image = new Image<Rgb24>(width, height);
-        image.ProcessPixelRows(rows =>
+        var hue = Interlocked.Increment(ref _shot) * 37 % 360;
+        string[] args =
+        [
+            "-hide_banner", "-loglevel", "error", "-nostdin",
+            "-f", "lavfi", "-i", "testsrc2=size=800x600",
+            "-vf", $"hue=h={hue}", "-frames:v", "1", "-q:v", "3", "-f", "mjpeg", "-y", path,
+        ];
+        var result = await runner.RunAsync(Options.FfmpegCommand, args, TimeSpan.FromSeconds(30), ct);
+        if (!result.Success)
         {
-            for (var y = 0; y < rows.Height; y++)
-            {
-                var row = rows.GetRowSpan(y);
-                for (var x = 0; x < row.Length; x++)
-                {
-                    row[x] = new Rgb24(
-                        (byte)((x * 255 / width + shot * 37) % 256),
-                        (byte)(y * 255 / height),
-                        (byte)((255 - x * 255 / width + shot * 71) % 256));
-                }
-            }
-        });
-        await image.SaveAsJpegAsync(path, ct);
+            throw new CameraException($"Simulated camera needs ffmpeg: {result.ErrorText}");
+        }
     }
 
-    protected override async Task CaptureProbeToFileAsync(string path, CancellationToken ct)
+    protected override Task CaptureProbeToFileAsync(string path, CancellationToken ct)
     {
-        // Mostly static so "no motion" is the default in Simulate mode; briefly shows a red block
+        // Mostly static so "no motion" is the default in Simulate mode; briefly shows a bright block
         // every 20 seconds so the motion detector has something to react to during development.
-        const int width = 160, height = 120;
+        // Written as the same raw YUV420 the real camera delivers: Y plane, then neutral U and V.
         var blip = DateTime.UtcNow.Second % 20 < 2;
-        using var image = new Image<Rgb24>(width, height);
-        image.ProcessPixelRows(rows =>
+        var yuv = new byte[Probe.Yuv420Bytes];
+        for (var y = 0; y < Probe.Height; y++)
         {
-            for (var y = 0; y < rows.Height; y++)
+            for (var x = 0; x < Probe.Width; x++)
             {
-                var row = rows.GetRowSpan(y);
-                var inBlipRow = blip && y is > 40 and < 80;
-                for (var x = 0; x < row.Length; x++)
-                {
-                    row[x] = inBlipRow && x is > 60 and < 100 ? new Rgb24(220, 60, 60) : new Rgb24(60, 60, 60);
-                }
+                yuv[(y * Probe.Width) + x] = blip && y is > 40 and < 80 && x is > 60 and < 100 ? (byte)200 : (byte)60;
             }
-        });
-        await image.SaveAsJpegAsync(path, ct);
+        }
+        yuv.AsSpan(Probe.GrayBytes).Fill(128);
+        return File.WriteAllBytesAsync(path, yuv, ct);
     }
 }

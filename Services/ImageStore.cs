@@ -1,9 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Processing;
 
 namespace RpiCam.Services;
 
@@ -22,10 +19,14 @@ public sealed partial class ImageStore
     private readonly string _thumbsDir;
     private readonly SemaphoreSlim _thumbLock = new(1, 1);
     private readonly ILogger<ImageStore> _log;
+    private readonly IProcessRunner _runner;
+    private readonly string _ffmpeg;
 
-    public ImageStore(IOptions<RpiCamOptions> options, ILogger<ImageStore> log)
+    public ImageStore(IOptions<RpiCamOptions> options, IProcessRunner runner, ILogger<ImageStore> log)
     {
         _log = log;
+        _runner = runner;
+        _ffmpeg = options.Value.FfmpegCommand;
         // Absolute on purpose: Results.File() treats a relative path as a file below wwwroot.
         var dataDir = Path.GetFullPath(options.Value.DataDir);
         _imagesDir = Path.Combine(dataDir, "images");
@@ -110,17 +111,10 @@ public sealed partial class ImageStore
         await _thumbLock.WaitAsync(ct);
         try
         {
-            if (!File.Exists(thumb))
+            if (!File.Exists(thumb) && !await CreateThumbnailAsync(source, thumb, ct))
             {
-                using var image = await Image.LoadAsync(source, ct);
-                image.Mutate(x => x.Resize(new ResizeOptions
-                {
-                    Mode = ResizeMode.Max,
-                    Size = new Size(ThumbnailSize, ThumbnailSize),
-                }));
-                var tmp = thumb + ".tmp";
-                await image.SaveAsJpegAsync(tmp, new JpegEncoder { Quality = 70 }, ct);
-                File.Move(tmp, thumb, overwrite: true);
+                // The gallery still works, only with the full picture (slower on a phone).
+                return source;
             }
             return thumb;
         }
@@ -128,6 +122,32 @@ public sealed partial class ImageStore
         {
             _thumbLock.Release();
         }
+    }
+
+    /// <summary>
+    /// Scales the picture down with ffmpeg (installed for the live view anyway) instead of decoding
+    /// it in the app: no image library, and the memory is freed as soon as the process exits.
+    /// </summary>
+    private async Task<bool> CreateThumbnailAsync(string source, string thumb, CancellationToken ct)
+    {
+        var tmp = thumb + ".tmp";
+        string[] args =
+        [
+            "-hide_banner", "-loglevel", "error", "-nostdin", "-threads", "1",
+            "-i", source,
+            // Fit into a ThumbnailSize square, never enlarge; -q:v 5 is roughly JPEG quality 70.
+            "-vf", $"scale='min({ThumbnailSize},iw)':'min({ThumbnailSize},ih)':force_original_aspect_ratio=decrease",
+            "-frames:v", "1", "-q:v", "5", "-f", "mjpeg", "-y", tmp,
+        ];
+        var result = await _runner.RunAsync(_ffmpeg, args, TimeSpan.FromSeconds(30), ct);
+        if (!result.Success || !File.Exists(tmp) || new FileInfo(tmp).Length == 0)
+        {
+            try { File.Delete(tmp); } catch (IOException) { }
+            _log.LogWarning("Thumbnail for {Image} failed: {Error}", Path.GetFileName(source), result.ErrorText);
+            return false;
+        }
+        File.Move(tmp, thumb, overwrite: true);
+        return true;
     }
 
     /// <summary>Deletes the named images and their thumbnails. Returns how many images were removed.</summary>

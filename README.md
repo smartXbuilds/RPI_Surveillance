@@ -29,9 +29,10 @@ dotnet run          # http://localhost:5018, beim ersten Aufruf Konto anlegen (l
 Im Development-Modus läuft die App im **Simulationsmodus** (`RpiCam:Simulate=true`): falsche Kamera (Farbverläufe) und ein
 simuliertes Netzwerk. Es wird nie `nmcli` aufgerufen, das WLAN des Entwicklungsrechners bleibt also unberührt.
 Ein Passwort, das mit `wrong` beginnt, lässt die simulierte Verbindung fehlschlagen.
-Für Live-Ansicht/Bewegungsclips im Simulationsmodus ersetzt `ffmpeg`s eigener Testbild-Generator (`testsrc`) die Kamera - dafür muss `ffmpeg` lokal
-installiert sein, sonst kommt eine klare Fehlermeldung statt eines stillen Fehlschlags. Die simulierte Bewegungserkennung "sieht" alle 20 Sekunden
-kurz einen roten Block, damit sich das Auslösen auch ohne Kamera beobachten lässt.
+Im Simulationsmodus ersetzt `ffmpeg`s eigener Testbild-Generator (`testsrc`/`testsrc2`) die Kamera, für Fotos, Live-Ansicht und
+Bewegungsclips; Vorschaubilder erzeugt ebenfalls `ffmpeg`. Dafür muss `ffmpeg` lokal installiert sein (`sudo apt install ffmpeg`), sonst
+kommt eine klare Fehlermeldung statt eines stillen Fehlschlags. Die simulierte Bewegungserkennung "sieht" alle 20 Sekunden kurz einen
+hellen Block, damit sich das Auslösen auch ohne Kamera beobachten lässt.
 
 ## Auf den Pi bringen
 
@@ -108,7 +109,8 @@ der Stop-Button beendet die serverseitige Pipeline daher explizit (`LiveStreamSe
 
 Nutzt **nicht** die eingebaute `motion_detect`-Stage von `rpicam-apps`: deren Ergebnis wird in der installierten `rpicam-apps-lite`-Version nirgends
 als Text geloggt oder im `--metadata`-Export sichtbar (nachgeprüft: nur der Stage-Name selbst steckt im Binary, kein Log-Text). Stattdessen holt die App
-selbst alle ~2 Sekunden ein kleines Graustufenbild (160×120) und vergleicht es mit dem vorherigen; überschreitet der Anteil veränderter Pixel die
+selbst alle ~2 Sekunden ein kleines Bild (160×120, `rpicam-still --encoding yuv420`) und vergleicht dessen Helligkeitsebene (die ersten
+160×120 Bytes, kein Dekodieren nötig) mit der vorherigen; überschreitet der Anteil veränderter Pixel die
 Empfindlichkeitsschwelle, gilt das als Bewegung. Läuft als eigener Hintergrunddienst (`MotionDetectionService`), Status live auf der Seite
 `/motion` sichtbar. Reaktion wahlweise Intervall-Fotos (`ICameraService.CaptureAsync`, landen ganz normal in der Galerie) oder ein Videoclip
 fester Länge über dieselbe `rpicam-vid`/`ffmpeg`-Pipeline wie die Live-Ansicht, aber in eine echte MP4-Datei unter `/var/lib/rpicam/motion/`.
@@ -136,6 +138,6 @@ werden aber übernommen.
 [Apache License 2.0](LICENSE).
 
 Verwendete Bibliotheken: [MudBlazor](https://github.com/MudBlazor/MudBlazor) (MIT),
-[Serilog](https://github.com/serilog/serilog) (Apache-2.0), [ImageSharp](https://github.com/SixLabors/ImageSharp)
-(Six Labors Split License - für Open-Source-Software unter Apache-2.0), .NET/ASP.NET Core (MIT).
-`rpicam-apps` (BSD-2-Clause) und `ffmpeg` (LGPL/GPL) werden nur als eigene Programme aufgerufen und nicht mitgeliefert.
+[Serilog](https://github.com/serilog/serilog) (Apache-2.0), .NET/ASP.NET Core (MIT). Eine Bildbibliothek gibt es nicht:
+`rpicam-apps` (BSD-2-Clause) und `ffmpeg` (LGPL/GPL, auch für die Vorschaubilder) werden nur als eigene Programme aufgerufen
+und nicht mitgeliefert.

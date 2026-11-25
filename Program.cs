@@ -7,7 +7,6 @@ using RpiCam;
 using RpiCam.Components;
 using RpiCam.Services;
 using Serilog;
-using SixLabors.ImageSharp.Memory;
 
 var supportedCultures = new[]
 {
@@ -25,10 +24,6 @@ builder.Host.UseSerilog((context, logger) => logger
 builder.Services.Configure<RpiCamOptions>(builder.Configuration.GetSection(RpiCamOptions.Section));
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.Section));
 var options = builder.Configuration.GetSection(RpiCamOptions.Section).Get<RpiCamOptions>() ?? new RpiCamOptions();
-
-// The Pi has 512 MB of RAM: keep ImageSharp from holding on to large pooled buffers.
-SixLabors.ImageSharp.Configuration.Default.MemoryAllocator =
-    MemoryAllocator.Create(new MemoryAllocatorOptions { MaximumPoolSizeMegabytes = 16 });
 
 // Notifications at the bottom: at the top right they would cover the "Capture now" button.
 builder.Services.AddMudServices(config =>

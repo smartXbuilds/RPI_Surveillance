@@ -1,6 +1,3 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 
 namespace RpiCam.Services;
 
@@ -28,9 +25,6 @@ public sealed class MotionDetectionService(
     ClipStore clips,
     ILogger<MotionDetectionService> log) : BackgroundService
 {
-    private const int ProbeWidth = 160;
-    private const int ProbeHeight = 120;
-
     // Out of 255: how much a pixel's brightness must change to count as "changed" at all. Fixed
     // rather than user-configurable, the Sensitivity setting already controls how much of the
     // image has to change; this second knob would mostly just confuse without adding much.
@@ -67,8 +61,7 @@ public sealed class MotionDetectionService(
             byte[] gray;
             try
             {
-                var probe = await camera.CaptureProbeAsync(stoppingToken);
-                gray = ToGrayscale(probe);
+                gray = await camera.CaptureProbeAsync(stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -157,28 +150,6 @@ public sealed class MotionDetectionService(
         }
         Status = status;
         StatusChanged?.Invoke();
-    }
-
-    private static byte[] ToGrayscale(byte[] jpegBytes)
-    {
-        using var image = Image.Load<L8>(jpegBytes);
-        if (image.Width != ProbeWidth || image.Height != ProbeHeight)
-        {
-            image.Mutate(x => x.Resize(ProbeWidth, ProbeHeight));
-        }
-        var result = new byte[ProbeWidth * ProbeHeight];
-        image.ProcessPixelRows(rows =>
-        {
-            for (var y = 0; y < rows.Height; y++)
-            {
-                var row = rows.GetRowSpan(y);
-                for (var x = 0; x < row.Length; x++)
-                {
-                    result[(y * ProbeWidth) + x] = row[x].PackedValue;
-                }
-            }
-        });
-        return result;
     }
 
     private static bool HasMotion(byte[] baseline, byte[] current, double fractionThreshold)
